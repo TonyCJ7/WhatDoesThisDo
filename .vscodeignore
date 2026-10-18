@@ -1,0 +1,17 @@
+.github/**
+.vscode/**
+.vscode-test/**
+.vscode-test.mjs
+.nvmrc
+.gitignore
+.vscodeignore
+agent/**
+docs/**
+!docs/assets/icon.png
+setup/**
+test/**
+node_modules/**
+parse.test.js
+package-lock.json
+CONTRIBUTING.md
+*.vsix

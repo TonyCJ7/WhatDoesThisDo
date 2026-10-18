@@ -84,7 +84,7 @@ suite("without a language server", () => {
     const texts = await hoverAt({ file: "notes.txt", needle: "save", word: "save" });
 
     assert.equal(texts.length, 3);
-    assert.match(texts[0], /Saves in A/);
+    assert.match(texts[0], /Saves in Python/);
   });
 
   test("an added, edited and removed page takes effect on the next hover", async () => {

@@ -5,7 +5,7 @@ Thanks for helping. The extension is small on purpose: one parser, one hover pro
 ## Run it
 
 ```
-npm install
+npm install            # Node.js 22 or later, see .nvmrc
 npm test               # parser tests, Node's built-in runner
 npm run test:editor    # downloads VS Code once and runs the hover tests inside it
 ```

@@ -13,6 +13,7 @@
     "url": "https://github.com/TonyCJ7/WhatDoesThisDo/issues"
   },
   "homepage": "https://github.com/TonyCJ7/WhatDoesThisDo#readme",
+  "icon": "docs/assets/icon.png",
   "engines": {
     "vscode": "^1.86.0"
   },
@@ -35,10 +36,11 @@
   "scripts": {
     "test": "node --test parse.test.js",
     "test:editor": "vscode-test",
-    "package": "python3 -I scripts/package.py"
+    "package": "vsce package"
   },
   "devDependencies": {
     "@vscode/test-cli": "^0.0.15",
-    "@vscode/test-electron": "^3.1.0"
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.0.0"
   }
 }

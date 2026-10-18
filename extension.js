@@ -43,8 +43,16 @@ function entriesNamed(dir, word) {
   const entries = [];
 
   for (const [page, { names }] of refreshPages(dir)) {
-    if (names.has(word)) {
-      entries.push(...parseReference(fs.readFileSync(path.join(dir, page), "utf8")).filter((entry) => entry.name === word));
+    if (!names.has(word)) {
+      continue;
+    }
+
+    const pageDir = path.join(dir, path.dirname(page));
+
+    for (const entry of parseReference(fs.readFileSync(path.join(dir, page), "utf8"))) {
+      if (entry.name === word) {
+        entries.push({ ...entry, pageDir });
+      }
     }
   }
 
@@ -57,33 +65,33 @@ async function definitionFiles(document, position) {
   return locations.map((location) => (location.targetUri ?? location.uri).fsPath);
 }
 
-function linkFile(dir, link) {
-  return path.resolve(dir, link.split("#")[0]);
+function linkFile(entry) {
+  return path.resolve(entry.pageDir, entry.link.split("#")[0]);
 }
 
-async function rankEntries(dir, candidates, document, position) {
+async function rankEntries(candidates, document, position) {
   if (candidates.length === 1) {
     return candidates;
   }
 
   const definitions = await definitionFiles(document, position);
-  const defined = candidates.filter((candidate) => definitions.includes(linkFile(dir, candidate.link)));
+  const defined = candidates.filter((candidate) => definitions.includes(linkFile(candidate)));
 
   if (defined.length > 0) {
     return defined;
   }
 
   const extension = path.extname(document.fileName);
-  const sameExtension = candidates.filter((candidate) => path.extname(candidate.link.split("#")[0]) === extension);
+  const sameExtension = candidates.filter((candidate) => path.extname(linkFile(candidate)) === extension);
   const others = candidates.filter((candidate) => !sameExtension.includes(candidate));
 
   return [...sameExtension, ...others];
 }
 
-function markdownFor(dir, entry) {
+function markdownFor(entry) {
   const markdown = new vscode.MarkdownString(entry.text);
 
-  markdown.baseUri = vscode.Uri.file(path.join(dir, path.sep));
+  markdown.baseUri = vscode.Uri.file(path.join(entry.pageDir, path.sep));
 
   return markdown;
 }
@@ -103,9 +111,9 @@ async function provideHover(document, position) {
     return null;
   }
 
-  const entries = await rankEntries(dir, candidates, document, position);
+  const entries = await rankEntries(candidates, document, position);
 
-  return new vscode.Hover(entries.map((entry) => markdownFor(dir, entry)), range);
+  return new vscode.Hover(entries.map((entry) => markdownFor(entry)), range);
 }
 
 function warmIndex() {
