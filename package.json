@@ -2,7 +2,7 @@
   "name": "whatdoesthisdo",
   "displayName": "WhatDoesThisDo",
   "description": "WhatDoesThisDo shows the documentation for your own functions and constants when you hover them, read from markdown reference pages in the workspace. Works in every language.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "TonyCJ7",
   "license": "MIT",
   "repository": {
@@ -18,7 +18,7 @@
     "vscode": "^1.86.0"
   },
   "categories": ["Other"],
-  "keywords": ["hover", "documentation", "markdown", "reference", "docs"],
+  "keywords": ["hover", "documentation", "markdown", "reference", "docs", "WDTD", "what does this do", "AI documentation", "agent", "Claude Code", "Cursor"],
   "activationEvents": ["onStartupFinished"],
   "main": "./extension.js",
   "contributes": {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1
+
+- Search keywords so the extension is found by `WDTD`, `What does this do?`, and terms like AI documentation, agent,
+  Claude Code and Cursor.
+- Social preview image for the GitHub repository.
+
 ## 0.1.0
 
 First public release.
