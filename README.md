@@ -11,8 +11,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/TonyCJ7/WhatDoesThisDo/actions/workflows/ci.yml">
-    <img src="https://github.com/TonyCJ7/WhatDoesThisDo/actions/workflows/ci.yml/badge.svg" alt="CI">
+  <a href="https://github.com/TonyCJ7/WhatDoesThisDo/actions/workflows/tests.yml">
+    <img src="https://github.com/TonyCJ7/WhatDoesThisDo/actions/workflows/tests.yml/badge.svg" alt="Tests">
   </a>
   <a href="https://github.com/TonyCJ7/WhatDoesThisDo">
     <img src="https://img.shields.io/github/stars/TonyCJ7/WhatDoesThisDo?style=for-the-badge&logo=github" alt="GitHub Stars">
@@ -296,7 +296,8 @@ it, against the fixture workspace in `test/fixture/`, in two launches configured
 - `servers` installs Pylance and rust-analyzer from the marketplace and checks that Python and Rust pick the entry by
   definition. It needs network access and `cargo`.
 
-The installer scripts have their own tests, run against temporary repositories on each operating system in CI.
+The installer scripts have their own tests, run against temporary repositories on each operating system by the
+Tests workflow on GitHub.
 
 ---
 
@@ -337,7 +338,7 @@ Thanks for helping. The extension is small on purpose: one parser, one hover pro
 | **Dependencies** | None at runtime. A dev dependency is fine when it earns its place; open an issue first for a new one. |
 | **Pure logic** | Anything that does not need the `vscode` module goes in `parse.js` or a new pure module, with a test in `parse.test.js`. |
 | **Editor behaviour** | Gets a case in `test/builtin.test.js` or `test/servers.test.js`, with a fixture file and a page entry rather than a mock. |
-| **Installers** | Three separate scripts by design, one per operating system. A change to the questions or the written files is made in all three; CI runs each. |
+| **Installers** | Three separate scripts by design, one per operating system. A change to the questions or the written files is made in all three; the Tests workflow runs each. |
 | **Agent content** | `agent/` is the single source for the skill, rule and prompt. The scripts copy it, they do not carry their own text. |
 | **Scope** | The smallest change that solves the request. No speculative options or abstractions without a second user. |
 
