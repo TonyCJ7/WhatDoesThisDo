@@ -1,0 +1,2 @@
+CONFIG_DIR=/etc
+echo "$CONFIG_DIR"

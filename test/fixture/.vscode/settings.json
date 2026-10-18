@@ -1,0 +1,4 @@
+{
+  "rust-analyzer.linkedProjects": ["rs/Cargo.toml"],
+  "python.defaultInterpreterPath": "python3"
+}

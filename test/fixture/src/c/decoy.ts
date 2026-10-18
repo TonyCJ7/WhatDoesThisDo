@@ -1,0 +1,3 @@
+interface Decoy {
+  unused: boolean;
+}

@@ -1,0 +1,44 @@
+{
+  "name": "whatdoesthisdo",
+  "displayName": "WhatDoesThisDo",
+  "description": "WhatDoesThisDo shows the documentation for your own functions and constants when you hover them, read from markdown reference pages in the workspace. Works in every language.",
+  "version": "0.1.0",
+  "publisher": "TonyCJ7",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TonyCJ7/WhatDoesThisDo.git"
+  },
+  "bugs": {
+    "url": "https://github.com/TonyCJ7/WhatDoesThisDo/issues"
+  },
+  "homepage": "https://github.com/TonyCJ7/WhatDoesThisDo#readme",
+  "engines": {
+    "vscode": "^1.86.0"
+  },
+  "categories": ["Other"],
+  "keywords": ["hover", "documentation", "markdown", "reference", "docs"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "WhatDoesThisDo",
+      "properties": {
+        "whatDoesThisDo.folder": {
+          "type": "string",
+          "default": "docs/whatdoesthisdo/references",
+          "description": "Folder, relative to each workspace folder, whose markdown pages hold one entry per function or constant. Subfolders are read too."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "test": "node --test parse.test.js",
+    "test:editor": "vscode-test",
+    "package": "python3 -I scripts/package.py"
+  },
+  "devDependencies": {
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.1.0"
+  }
+}
