@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/TonyCJ7/WhatDoesThisDo/actions/workflows/tests.yml">
-    <img src="https://github.com/TonyCJ7/WhatDoesThisDo/actions/workflows/tests.yml/badge.svg" alt="Tests">
+    <img src="https://img.shields.io/github/actions/workflow/status/TonyCJ7/WhatDoesThisDo/tests.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Tests" alt="Tests">
   </a>
   <a href="https://github.com/TonyCJ7/WhatDoesThisDo">
     <img src="https://img.shields.io/github/stars/TonyCJ7/WhatDoesThisDo?style=for-the-badge&logo=github" alt="GitHub Stars">

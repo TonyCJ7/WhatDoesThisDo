@@ -42,19 +42,31 @@ async function waitForWord(document, position, word) {
   assert.equal(wordAt(document, position), word, "the editor's word pattern never produced the expected word");
 }
 
-async function waitForDefinitionAcrossFiles(document, position) {
-  for (let attempt = 0; attempt < 120; attempt += 1) {
-    const locations = await vscode.commands.executeCommand("vscode.executeDefinitionProvider", document.uri, position);
-    const resolved = locations.some((location) => (location.targetUri ?? location.uri).fsPath !== document.uri.fsPath);
+async function definitionFiles(document, position) {
+  const locations = await vscode.commands.executeCommand("vscode.executeDefinitionProvider", document.uri, position);
 
-    if (resolved) {
+  return locations.map((location) => (location.targetUri ?? location.uri).fsPath).sort().join("\n");
+}
+
+async function waitForStableDefinitionAcrossFiles(document, position) {
+  let previous = "";
+  let stableRounds = 0;
+
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    const files = await definitionFiles(document, position);
+    const crossFile = files.split("\n").some((file) => file && file !== document.uri.fsPath);
+
+    stableRounds = crossFile && files === previous ? stableRounds + 1 : 0;
+    previous = files;
+
+    if (stableRounds >= 3) {
       return;
     }
 
     await sleep(500);
   }
 
-  throw new Error(`the language server never resolved the symbol in ${document.fileName}`);
+  throw new Error(`the language server never settled on a definition for the symbol in ${document.fileName}`);
 }
 
 async function ourHovers(document, position) {
@@ -70,7 +82,7 @@ async function hoverAt({ file, needle, offset = 1, word, resolves = false }) {
   await waitForWord(document, position, word);
 
   if (resolves) {
-    await waitForDefinitionAcrossFiles(document, position);
+    await waitForStableDefinitionAcrossFiles(document, position);
   }
 
   return ourHovers(document, position);
