@@ -11,6 +11,12 @@
 </p>
 
 <p align="center">
+  <a href="https://marketplace.visualstudio.com/items?itemName=TonyCJ7.whatdoesthisdo">
+    <img src="https://img.shields.io/badge/VS%20Marketplace-WhatDoesThisDo-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VS Marketplace">
+  </a>
+  <a href="https://open-vsx.org/extension/TonyCJ7/whatdoesthisdo">
+    <img src="https://img.shields.io/open-vsx/v/TonyCJ7/whatdoesthisdo?style=for-the-badge&label=Open%20VSX" alt="Open VSX">
+  </a>
   <a href="https://github.com/TonyCJ7/WhatDoesThisDo/actions/workflows/tests.yml">
     <img src="https://img.shields.io/github/actions/workflow/status/TonyCJ7/WhatDoesThisDo/tests.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Tests" alt="Tests">
   </a>
@@ -95,19 +101,17 @@ first.
 
 ### 1. Install the extension
 
-The extension is installed from a package you build from this repository. Node.js 22 or later is needed for the
-build only, since the extension itself has no runtime dependencies.
+Open the Extensions view in your editor, search for **WhatDoesThisDo**, and install it. VS Code finds it on the
+[Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=TonyCJ7.whatdoesthisdo) and Cursor
+finds it on [Open VSX](https://open-vsx.org/extension/TonyCJ7/whatdoesthisdo); the same extension is published to both.
+Nothing else is needed, since it has no runtime dependencies and nothing to configure.
+
+From a terminal:
 
 ```bash
-git clone https://github.com/TonyCJ7/WhatDoesThisDo.git
-cd WhatDoesThisDo
-npm install
-npm run package
-code --install-extension whatdoesthisdo-0.1.0.vsix
+code --install-extension TonyCJ7.whatdoesthisdo      # VS Code
+cursor --install-extension TonyCJ7.whatdoesthisdo    # Cursor
 ```
-
-For Cursor, use `"/Applications/Cursor.app/Contents/Resources/app/bin/cursor" --install-extension` on macOS, or the
-`cursor` command where it is on your path. Then run "Developer: Reload Window".
 
 ### 2. Set up your AI agent
 
@@ -285,6 +289,10 @@ npm run test:editor
 ```
 
 Open the folder in VS Code or Cursor and press F5 to run the extension from source in a second editor window.
+
+To install a local build instead of the published one, `npm run package` writes `whatdoesthisdo-<version>.vsix`, and
+`code --install-extension whatdoesthisdo-<version>.vsix` installs it. For Cursor use the `cursor` command, or on macOS
+`"/Applications/Cursor.app/Contents/Resources/app/bin/cursor"`. Then run "Developer: Reload Window".
 
 `npm run test:editor` downloads a stock VS Code build into `.vscode-test/` on first run and runs the hover tests inside
 it, against the fixture workspace in `test/fixture/`, in two launches configured by `.vscode-test.mjs`:
