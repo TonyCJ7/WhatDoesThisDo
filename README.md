@@ -11,11 +11,8 @@
 </p>
 
 <p align="center">
-  <a href="https://marketplace.visualstudio.com/items?itemName=TonyCJ7.whatdoesthisdo">
-    <img src="https://img.shields.io/badge/VS%20Marketplace-WhatDoesThisDo-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VS Marketplace">
-  </a>
-  <a href="https://open-vsx.org/extension/TonyCJ7/whatdoesthisdo">
-    <img src="https://img.shields.io/open-vsx/v/TonyCJ7/whatdoesthisdo?style=for-the-badge&label=Open%20VSX&cacheSeconds=300" alt="Open VSX">
+  <a href="https://github.com/TonyCJ7/WhatDoesThisDo/blob/main/CHANGELOG.md">
+    <img src="https://img.shields.io/github/package-json/v/TonyCJ7/WhatDoesThisDo?style=for-the-badge&label=Version&color=orange&cacheSeconds=300" alt="Version">
   </a>
   <a href="https://github.com/TonyCJ7/WhatDoesThisDo/actions/workflows/tests.yml">
     <img src="https://img.shields.io/github/actions/workflow/status/TonyCJ7/WhatDoesThisDo/tests.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Tests&cacheSeconds=300" alt="Tests">
