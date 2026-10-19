@@ -179,20 +179,14 @@ screens.
 
 ## 📚 Documenting the code you already have
 
-The extension does not write descriptions for existing code. It shows whatever is on the pages, and the agent setup
-covers code the agent changes from now on. A function nobody has touched since the setup has no entry until someone
-writes one.
+Neither the extension nor your AI agent writes descriptions for existing code on its own. The extension shows whatever
+is on the pages, and the agent setup covers code the agent changes from now on. A function nobody has touched since
+the setup has no entry until someone writes one.
 
-The agent can catch up on old code when you ask it to. After the setup it knows where the pages go and what an entry
-looks like:
-
-```
-Document every function and constant in src/figma/ following the whatdoesthisdo skill.
-```
-
-It writes one page per source file, in the place the tooltip reads from. On a large codebase ask for one folder at a
-time, so the agent reads every file and the pull request stays small enough to review. Treat the entries it writes for
-old code like any other code review. It is describing functions it did not write.
+The agent can catch up on old code when you ask. Prompt it to add descriptions for a file or a folder using the skill
+installed during setup. It writes one page per source file, in the place the tooltip reads from. On a large codebase
+ask for one folder at a time, so the agent reads every file and the pull request stays small enough to review. Treat
+the entries it writes for old code like any other code review, since it is describing functions it did not write.
 
 ---
 
