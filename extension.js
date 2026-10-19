@@ -10,6 +10,7 @@ const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 const LINE_IN_LINK = /#L(\d+)$/;
 const SIGNATURE = /\(.*$/;
 const SETTLE_MS = 150;
+const MAX_SEARCH_BYTES = 2 * 1024 * 1024;
 const pagesByFolder = new Map();
 const pendingChanges = new Map();
 const syncedAt = new Map();
@@ -49,14 +50,42 @@ function indexPage(page) {
   };
 }
 
+function markdownFilesIn(dir, prefix = "") {
+  const files = [];
+
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isSymbolicLink()) {
+      continue;
+    }
+
+    const relative = path.join(prefix, entry.name);
+
+    if (entry.isDirectory()) {
+      files.push(...markdownFilesIn(path.join(dir, entry.name), relative));
+    } else if (entry.isFile() && entry.name.endsWith(".md")) {
+      files.push(relative);
+    }
+  }
+
+  return files;
+}
+
+function isRealFolder(dir) {
+  try {
+    return fs.lstatSync(dir).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 function refreshPages(dir) {
-  if (!fs.existsSync(dir)) {
+  if (!isRealFolder(dir)) {
     return new Map();
   }
 
   const known = pagesByFolder.get(dir) ?? new Map();
   const pages = new Map();
-  const files = fs.readdirSync(dir, { recursive: true }).filter((name) => name.endsWith(".md")).sort();
+  const files = markdownFilesIn(dir).sort();
 
   for (const page of files) {
     const file = path.join(dir, page);
@@ -101,6 +130,10 @@ async function definitionLocations(document, position) {
 
 function searchLine(file, name) {
   try {
+    if (fs.statSync(file).size > MAX_SEARCH_BYTES) {
+      return null;
+    }
+
     return declarationLine(fs.readFileSync(file, "utf8"), name);
   } catch {
     return null;

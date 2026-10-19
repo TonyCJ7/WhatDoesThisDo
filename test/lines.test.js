@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 const vscode = require("vscode");
 
@@ -401,6 +402,77 @@ suite("the command updates every page that drifted without a save", () => {
       }
     });
   }
+});
+
+suite("what the extension refuses to read", () => {
+  test("a symbolic link inside the references folder is not followed", async () => {
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), "wdtd-outside-"));
+    const link = path.join(references, "temp_link");
+    const source = path.join(fixture, "temp_symlink.py");
+    const files = {
+      [source]: "print(symlinked_entry(1))\n",
+      [path.join(outside, "elsewhere.md")]: "### [symlinked_entry()](elsewhere.py#L1)\n\nA page outside the workspace.\n",
+    };
+
+    writeTemp(files);
+    fs.symlinkSync(outside, link, "junction");
+
+    try {
+      assert.deepEqual(await hoverAt({ file: "temp_symlink.py", needle: "symlinked_entry(1)", word: "symlinked_entry" }), []);
+    } finally {
+      fs.rmSync(link, { force: true });
+      await removeTemp(files);
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  test("a references folder that is itself a symbolic link is ignored", async () => {
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), "wdtd-refs-"));
+    const link = path.join(fixture, "temp_linked_refs");
+    const source = path.join(fixture, "temp_linked_folder.py");
+    const files = {
+      [source]: "print(linked_folder_entry(1))\n",
+      [path.join(outside, "elsewhere.md")]: "### [linked_folder_entry()](elsewhere.py#L1)\n\nA page behind a linked folder.\n",
+    };
+    const settings = vscode.workspace.getConfiguration("whatDoesThisDo");
+    const hadSettingsFolder = fs.existsSync(path.join(fixture, ".vscode"));
+
+    writeTemp(files);
+    fs.symlinkSync(outside, link, "junction");
+    await settings.update("folder", "temp_linked_refs", vscode.ConfigurationTarget.Workspace);
+
+    try {
+      assert.deepEqual(await hoverAt({ file: "temp_linked_folder.py", needle: "linked_folder_entry(1)", word: "linked_folder_entry" }), []);
+    } finally {
+      await settings.update("folder", undefined, vscode.ConfigurationTarget.Workspace);
+      fs.rmSync(link, { force: true });
+      await removeTemp(files);
+      fs.rmSync(outside, { recursive: true, force: true });
+
+      if (!hadSettingsFolder) {
+        fs.rmSync(path.join(fixture, ".vscode"), { recursive: true, force: true });
+      }
+    }
+  });
+
+  test("a linked file above two megabytes is not searched, so the page line is used", async () => {
+    const source = path.join(fixture, "temp_big.py");
+    const page = path.join(references, "temp_big.md");
+    const files = {
+      [source]: `${"# filler\n".repeat(300000)}def big_entry():\n    return 1\n\n\nbig_entry(1)\n`,
+      [page]: "### [big_entry()](../../../temp_big.py#L7)\n\nToo big to search; the page line stands.\n",
+    };
+
+    writeTemp(files);
+
+    try {
+      const [text] = await hoverAt({ file: "temp_big.py", needle: "big_entry(1)", word: "big_entry" });
+
+      assert.equal(fragmentOf(text), 7, text);
+    } finally {
+      await removeTemp(files);
+    }
+  });
 });
 
 suite("the hover block", () => {

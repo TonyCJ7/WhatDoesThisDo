@@ -8,6 +8,7 @@
 - The `#L` numbers on the pages are rewritten when a source file is saved, when it changes on disk through an agent
   or a `git pull`, when the window opens and when it regains focus. Setting `whatDoesThisDo.updateLines` turns that
   off; the command `WhatDoesThisDo: Update line numbers` does it for every page at once.
+- The page walk no longer follows symbolic links, and a linked file above two megabytes is not searched.
 
 ## 0.1.2
 
