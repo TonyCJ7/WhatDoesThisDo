@@ -56,7 +56,15 @@ cleanup() {
   rm -rf "$TMP"
 }
 
-trap cleanup EXIT INT TERM
+interrupted() {
+  trap - EXIT
+  cleanup
+  printf '\n'
+  exit 130
+}
+
+trap cleanup EXIT
+trap interrupted INT TERM
 
 script_dir=$(cd "$(dirname "$0")" 2>/dev/null && pwd || true)
 
@@ -89,46 +97,51 @@ open_keys() {
 
   if [ "$KEYS" != stdin ]; then
     SAVED_STTY=$(stty -g < "$KEYS")
-    stty -icanon -echo min 1 time 0 < "$KEYS"
+    stty -icanon -echo -isig min 1 time 0 < "$KEYS"
   fi
 }
 
 read_byte() {
   if [ "$KEYS" = stdin ]; then
-    dd bs=1 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n'
+    dd bs=1 count=1 of="$TMP/key" 2>/dev/null
   else
-    dd bs=1 count=1 2>/dev/null < "$KEYS" | od -An -tx1 | tr -d ' \n'
+    dd bs=1 count=1 of="$TMP/key" 2>/dev/null < "$KEYS"
   fi
+
+  BYTE=$(od -An -tx1 "$TMP/key" | tr -d ' \n')
 }
 
 read_key() {
-  b=$(read_byte)
+  read_byte
+  b=$BYTE
 
   case "$b" in
     1b)
       [ "$KEYS" = stdin ] || stty min 0 time 2 < "$KEYS"
-      b2=$(read_byte)
+      read_byte
+      b2=$BYTE
       b3=""
-      [ "$b2" = 5b ] && b3=$(read_byte)
+      [ "$b2" = 5b ] && { read_byte; b3=$BYTE; }
       [ "$KEYS" = stdin ] || stty min 1 time 0 < "$KEYS"
 
       case "$b3" in
-        41) echo up ;;
-        42) echo down ;;
-        44) echo back ;;
-        *) echo other ;;
+        41) KEY=up ;;
+        42) KEY=down ;;
+        44) KEY=back ;;
+        *) KEY=other ;;
       esac
       ;;
-    0a|0d) echo enter ;;
-    6a) echo down ;;
-    6b) echo up ;;
-    62) echo back ;;
-    71) echo quit ;;
-    31) echo 1 ;;
-    32) echo 2 ;;
-    33) echo 3 ;;
-    "") echo quit ;;
-    *) echo other ;;
+    03) interrupted ;;
+    0a|0d) KEY=enter ;;
+    6a) KEY=down ;;
+    6b) KEY=up ;;
+    62) KEY=back ;;
+    71) KEY=quit ;;
+    31) KEY=1 ;;
+    32) KEY=2 ;;
+    33) KEY=3 ;;
+    "") KEY=quit ;;
+    *) KEY=other ;;
   esac
 }
 
@@ -138,7 +151,7 @@ read_line() {
   else
     stty "$SAVED_STTY" < "$KEYS"
     read -r LINE < "$KEYS" || LINE=""
-    stty -icanon -echo min 1 time 0 < "$KEYS"
+    stty -icanon -echo -isig min 1 time 0 < "$KEYS"
   fi
 }
 
@@ -203,7 +216,9 @@ screen_welcome() {
     printf '  Three short steps. Nothing is written until you confirm on the summary.\n'
     printf '  %senter start · q quit%s' "$DIM" "$RESET"
 
-    case "$(read_key)" in
+    read_key
+
+    case "$KEY" in
       enter) return 0 ;;
       quit) return 1 ;;
     esac
@@ -242,7 +257,9 @@ choose() {
     header "$step"
     draw_menu "$question" "$current" "$@"
 
-    case "$(read_key)" in
+    read_key
+
+    case "$KEY" in
       up) [ "$current" -gt 1 ] && current=$((current - 1)) ;;
       down) [ "$current" -lt "$count" ] && current=$((current + 1)) ;;
       enter) CHOICE=$current; return ;;
@@ -344,7 +361,9 @@ interactive() {
         printf '%sFiles to write:%s\n%s\n\n' "$BOLD" "$RESET" "$(plan_lines)"
         printf '%senter write · 1 2 3 change a step · q quit%s\n' "$DIM" "$RESET"
 
-        case "$(read_key)" in
+        read_key
+
+        case "$KEY" in
           enter) clear_screen; INTERACTIVE_DONE=1; return ;;
           1) screen=1; from_summary=1; continue ;;
           2) screen=2; from_summary=1; continue ;;

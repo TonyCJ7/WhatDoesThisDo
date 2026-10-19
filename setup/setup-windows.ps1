@@ -293,7 +293,7 @@ try {
   }
 
   function Invoke-Interactive {
-    if (-not (Show-WelcomeScreen)) { Clear-Screen; Write-Output "nothing written"; return $false }
+    if (-not (Show-WelcomeScreen)) { Clear-Screen; Write-Output "nothing written"; return }
     $screen = 1
     $fromSummary = $false
     while ($true) {
@@ -309,15 +309,15 @@ try {
         Write-Host ""
         Write-Host "enter write · 1 2 3 change a step · q quit" -ForegroundColor DarkGray
         $key = Read-Key
-        if ($key -eq "enter") { Clear-Screen; $script:InteractiveDone = $true; return $true }
-        if ($key -eq "quit") { Clear-Screen; Write-Output "nothing written"; return $false }
+        if ($key -eq "enter") { Clear-Screen; $script:InteractiveDone = $true; return }
+        if ($key -eq "quit") { Clear-Screen; Write-Output "nothing written"; return }
         if ($key -in @("1", "2", "3")) { $screen = [int] $key; $fromSummary = $true }
         continue
       }
       if ($screen -eq 1) { $choice = Show-AgentScreen }
       elseif ($screen -eq 2) { $choice = Show-ScopeScreen }
       else { $choice = Show-FolderScreen }
-      if ($choice -eq "quit") { Clear-Screen; Write-Output "nothing written"; return $false }
+      if ($choice -eq "quit") { Clear-Screen; Write-Output "nothing written"; return }
       if ($choice -eq "back") { if ($screen -gt 1) { $screen-- }; continue }
       if ($fromSummary) { $screen = 4; $fromSummary = $false } else { $screen++ }
     }
@@ -378,7 +378,8 @@ try {
     if (-not $Scope) { $Scope = "project" }
     if (-not $Folder) { $Folder = $DefaultFolder }
   } elseif (-not $Agent -or -not $Scope -or -not $Folder) {
-    if (-not (Invoke-Interactive)) { exit 0 }
+    Invoke-Interactive
+    if (-not $script:InteractiveDone) { exit 0 }
   }
 
   if ($Agent -notin @("claude", "cursor", "both")) { throw "agent must be claude, cursor or both" }
