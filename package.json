@@ -1,7 +1,7 @@
 {
   "name": "whatdoesthisdo",
   "displayName": "WhatDoesThisDo",
-  "description": "WhatDoesThisDo shows the documentation for your own functions and constants when you hover them, read from markdown reference pages in the workspace. Works in every language.",
+  "description": "Hover over one of your own functions or constants and read what it is for, from markdown pages in the repository that your AI agent keeps up to date. Works in every language.",
   "version": "0.1.1",
   "publisher": "TonyCJ7",
   "license": "MIT",

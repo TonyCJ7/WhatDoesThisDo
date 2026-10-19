@@ -5,9 +5,9 @@
 <h1 align="center">WhatDoesThisDo</h1>
 
 <p align="center">
-  <strong>Hover a function or constant and read what it is for, written in markdown pages your AI agent keeps up to date.</strong>
+  <strong>Hover over a function or constant name and read what it is for, from markdown pages your AI agent keeps up to date.</strong>
   <br />
-  A VS Code and Cursor extension for codebases that grow faster than anyone reads them.
+  A VS Code and Cursor extension for codebases that grow faster than anyone can read them.
 </p>
 
 <p align="center">
@@ -50,30 +50,30 @@
 
 ## 🧭 The problem
 
-AI agents write code faster than a team can read it. A function lands in the repository, it works, the tests pass,
-and a week later someone hovers it and has to read the body to learn what it does. A constant appears with a value
-and nobody remembers why that value. The knowledge existed for a moment, in the head of whoever or whatever wrote the
-code, and nothing wrote it down.
+AI agents write code faster than a team can read it. A function lands in the repository, the tests pass, and a week
+later someone has to read its body to find out what it is for. A constant appears with a value and nobody remembers
+why it is that value. Whoever or whatever wrote the code knew, and nothing wrote it down.
 
-Code comments were meant to hold that knowledge, but they clutter the file, they go stale next to the code they
-describe, and an agent asked to write them tends to restate the line below.
+Code comments are the usual answer, and they have their own problems. They clutter the file, they go stale next to
+the code they describe, and an agent asked to write them tends to restate the line below.
 
 ## ✨ What is WhatDoesThisDo?
 
-WhatDoesThisDo is an editor extension that shows documentation for your own functions and constants when you hover
-them. The documentation lives in markdown pages inside the repository, one page per source file, and the pages can be
-written by the same AI agent that writes the code, in the same change, while it still knows why.
+WhatDoesThisDo is an editor extension. When you hold the mouse over the name of one of your own functions or constants,
+it shows a short description of what that thing is for. The descriptions live in markdown pages inside the repository,
+one page per source file. The same AI agent that writes the code can write them, in the same change, while it still
+knows why.
 
-- **Hover in every language.** TypeScript, Python, Rust, Go, Ruby, shell, PHP, YAML or anything else the editor can
-  open. The extension asks the editor for the word under the cursor using that language's own rules.
-- **Pages are plain markdown.** They read well on GitHub, their links jump to the source line, and they diff in pull
-  requests like any other file.
-- **The agent keeps them true.** A one-line setup installs a skill and a rule for Claude Code and Cursor. The agent
-  reads the entry before changing a function and updates it after, as part of the same change.
-- **Definition-aware when a language server is running.** Two functions called `save` in different files each show
-  their own entry.
-- **Fast on large projects.** An in-memory index is built when the window opens and refreshed per page when a page
-  changes. Two thousand pages still answer a hover in a few milliseconds.
+- It works in any language the editor can open: TypeScript, Python, Rust, Go, Ruby, shell, PHP, YAML and so on. The
+  extension asks the editor what the word under the cursor is, using that language's own rules.
+- The pages are plain markdown. They read well on GitHub, their links jump to the source line, and they show up in
+  pull request diffs like any other file.
+- The agent keeps them true. A one-line setup installs a skill and a rule for Claude Code and Cursor, so the agent
+  reads the entry before changing a function and updates it afterwards, in the same change.
+- When a language server is running, the extension knows which definition you mean. Two functions called `save` in
+  different files each show their own entry.
+- It stays fast on large projects. The index is built in memory when the window opens and only the pages that changed
+  are read again. Two thousand pages still answer in a few milliseconds.
 
 ---
 
@@ -85,15 +85,14 @@ written by the same AI agent that writes the code, in the same change, while it 
 </p>
 -->
 
-1. You rest the mouse on a name in any file.
+1. You hold the mouse over a name in any file.
 2. The extension looks the word up in its index of `docs/whatdoesthisdo/references/`, reads the page that holds it,
-   and shows the entry under the editor's own hover. The heading in the entry is a link to the source line.
-3. If no page has an entry for the word, the extension adds nothing and the editor's hover is left as it was.
+   and adds the entry below the editor's own tooltip. The heading of the entry links to the source line.
+3. If no page has an entry for that word, the extension adds nothing and the tooltip stays as it was.
 
-When the same name is documented in several files, the extension asks the editor's language server where the symbol
-under the cursor is defined and shows the entry for that file. Without a server, or when no entry points at the file
-the server named, it shows every entry for the name, each with its link, with entries from files of the same type
-first.
+When several files document the same name, the extension asks the language server where the symbol under the cursor
+is defined and shows the entry for that file. Without a server, or when no entry points at the file the server named,
+it shows every entry for the name with its link, entries from files of the same type first.
 
 ---
 
@@ -101,10 +100,10 @@ first.
 
 ### 1. Install the extension
 
-Open the Extensions view in your editor, search for **WhatDoesThisDo**, and install it. VS Code finds it on the
+Open the Extensions view in your editor, search for **WhatDoesThisDo** and install it. VS Code finds it on the
 [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=TonyCJ7.whatdoesthisdo) and Cursor
-finds it on [Open VSX](https://open-vsx.org/extension/TonyCJ7/whatdoesthisdo); the same extension is published to both.
-Nothing else is needed, since it has no runtime dependencies and nothing to configure.
+on [Open VSX](https://open-vsx.org/extension/TonyCJ7/whatdoesthisdo). It is the same extension on both. There is
+nothing to configure and no runtime dependency to install.
 
 From a terminal:
 
@@ -115,11 +114,11 @@ cursor --install-extension TonyCJ7.whatdoesthisdo    # Cursor
 
 ### 2. Set up your AI agent
 
-In your own project, run the installer for your operating system. A welcome screen says what it does, then three
-screens ask which agent to set up, this project or every project, and where the pages live, with the arrow keys to
-move, enter to select, `b` to go back and `q` to quit. A summary shows every choice and the files it will write and
-lets you jump back to any step. After writing it reminds you to reload the editor, since skills and rules are read
-when a session starts.
+In your own project, run the installer for your operating system. It opens with a welcome screen, then asks three
+questions: which agent to set up, whether for this project or for every project, and where the pages live. Arrow keys
+move, enter selects, `b` goes back and `q` quits. A summary shows your choices and the files it is about to write, and
+you can jump back to any step from there. Once the files are written it reminds you to reload the editor, because
+skills and rules are read when a session starts.
 
 macOS:
 
@@ -139,15 +138,15 @@ Windows, in PowerShell:
 irm https://raw.githubusercontent.com/TonyCJ7/WhatDoesThisDo/main/setup/setup-windows.ps1 | iex
 ```
 
-Or paste the contents of [`agent/PROMPT.md`](agent/PROMPT.md) into Claude Code or Cursor and let the agent do the
-setup. It asks the same questions and copies the same files.
+If you would rather not run a script, paste the contents of [`agent/PROMPT.md`](agent/PROMPT.md) into Claude Code or
+Cursor. The agent asks the same questions and copies the same files.
 
-### 3. Hover
+### 3. Try it
 
-Ask the agent to write or change a function. It writes the entry on the file's page in the same change. Hover the
-name and read it.
+Ask the agent to write or change a function. It adds the entry to that file's page in the same change. Hold the mouse
+over the function name in the editor and the entry appears.
 
-If you want to see it work before involving an agent, write one page by hand as described in
+To see it work before involving an agent, write one page by hand as described in
 [Writing documentation by hand](#-writing-documentation-by-hand).
 
 ---
@@ -163,32 +162,32 @@ The agent setup writes two things. Claude Code and Cursor both read them.
 | The rule for Cursor | `.cursor/rules/whatdoesthisdo.mdc` | printed for you to paste into Cursor Settings, Rules, User Rules |
 | The references folder | created with a short `README.md` if missing | not touched |
 
-The **skill** is the full instruction: where the pages live, how they are named and structured, the page format, how
-to compute the link to a source line, and what a good entry says. It also tells the agent to read the entry before
-touching a function and to update the entry in the same change as the code. Its text is
+The skill is the full instruction: where the pages live, how they are named and laid out, the page format, how to
+work out the link to a source line, and what a good entry says. It also tells the agent to read the entry before
+touching a function and to update it in the same change as the code. Its text is
 [`agent/skill/SKILL.md`](agent/skill/SKILL.md).
 
-The **rule** is three sentences that are always in the agent's context and point at the skill, so the agent reaches
+The rule is three sentences that sit in the agent's context all the time and point at the skill, so the agent reaches
 for it without being asked. Its text is [`agent/rule-block.md`](agent/rule-block.md).
 
-The naming and folder structure the skill prescribes are the same ones described in the next section, so pages written
-by an agent and pages written by hand end up in the same places.
+The skill uses the same names and folder layout as the next section, so pages written by an agent and pages written by
+hand end up in the same places.
 
-Running the setup a second time replaces the marked block instead of adding another. The scripts also accept
-`--agent`, `--scope`, `--folder` and `--yes` (`-Agent`, `-Scope`, `-Folder`, `-Yes` on Windows) to skip the screens,
-for scripts and CI.
+Running the setup again replaces the marked block rather than adding a second one. For scripts and CI, the installers
+take `--agent`, `--scope`, `--folder` and `--yes` (`-Agent`, `-Scope`, `-Folder`, `-Yes` on Windows) and skip the
+screens.
 
 ---
 
 ## ✍️ Writing documentation by hand
 
-You can write or edit any page yourself. The extension reads every `.md` file under the references folder, so a page
-written by hand and a page written by an agent are the same thing to it.
+You can write or edit any page yourself. The extension reads every `.md` file under the references folder and does not
+care who wrote it.
 
 ### Folder structure and naming
 
-Pages mirror the source tree. Each source file has one page, at the same path under the references folder, with the
-extension replaced by `.md`.
+Pages mirror the source tree. Each source file has one page at the same path under the references folder, with the
+file extension replaced by `.md`.
 
 ```
 your-project/
@@ -216,8 +215,8 @@ Inside a page:
 - Each function, method or class is a `### ` entry, in the order it appears in the source.
 - Constants go at the end under a `## Constants` heading, one bullet each.
 
-The extension itself does not enforce this layout. It reads any `.md` file in the folder or its subfolders. The layout
-is what lets a reader, and an agent, find the page for a file without searching.
+The extension does not enforce this layout. It reads any `.md` file in the folder or its subfolders. The layout is
+there so that a reader, or an agent, can find the page for a file without searching.
 
 ### Page format
 
@@ -251,14 +250,14 @@ Build the two error objects. Every name in the heading gets this entry.
 - A bullet `- [` + backticked name + `](link): text` is a one-line entry for a constant.
 - Links are relative to the page, as in any markdown file, and end in `#L<line>` of the declaration. From the
   references folder itself the repository root is `../../../`. Add one `../` for each subfolder the page sits in, so
-  `references/src/config.md` uses `../../../../`. The links are clickable in the hover, and the file part of the link
-  is what the definition match compares against.
+  `references/src/config.md` uses `../../../../`. The links are clickable in the tooltip, and the file part of the link
+  is what the extension compares with the language server's answer.
 - A heading can list several names when they share an explanation. Each gets its own link.
 
 ### What makes a good entry
 
 Two to five lines a reader can trust: what it is for, what goes in, what comes out, what it refuses and with which
-message. Write down the intent, since the code already shows the mechanics.
+message. Write down the intent. The code already shows the mechanics.
 
 ---
 
@@ -273,9 +272,9 @@ message. Write down the intent, since the code already shows the mechanics.
 ## ⚡ Performance
 
 The index is built from the pages when the window opens and kept in memory as a map from name to page, without the
-entry text. Before every hover the extension checks each page's modification time and size and re-reads only the pages
-that changed, so an edit shows up on the next hover. Measured on 500 pages with 50,000 entries, a hover takes about
-5 ms after the index exists and the index itself holds under 6 MB. The extension writes nothing to disk.
+entry text. Each time you hover over a name the extension checks every page's modification time and size and re-reads
+only the pages that changed, so an edit shows up the next time. Measured on 500 pages with 50,000 entries, a lookup
+takes about 5 ms once the index exists, and the index itself is under 6 MB. The extension writes nothing to disk.
 
 ---
 
@@ -300,10 +299,10 @@ To install a local build instead of the published one, `npm run package` writes 
 `npm run test:editor` downloads a stock VS Code build into `.vscode-test/` on first run and runs the hover tests inside
 it, against the fixture workspace in `test/fixture/`, in two launches configured by `.vscode-test.mjs`:
 
-- `builtin` runs with other extensions disabled. TypeScript and JavaScript use the bundled server and pick the entry by
-  definition. Python, Rust, Ruby, shell, PHP, Go, YAML and plain text have no server there and show every entry for the
-  name, same file type first, including each language's word shape. It also edits a page mid-run to check the index
-  refreshes and reads pages from subfolders.
+- `builtin` runs with other extensions disabled. TypeScript and JavaScript use the bundled language server and pick
+  the entry by definition. Python, Rust, Ruby, shell, PHP, Go, YAML and plain text have no server there, so they show
+  every entry for the name, same file type first, and the tests check each language's word shape. The launch also
+  edits a page mid-run to check that the index refreshes, and reads pages from subfolders.
 - `servers` installs Pylance and rust-analyzer from the marketplace and checks that Python and Rust pick the entry by
   definition. It needs network access and `cargo`.
 
@@ -334,13 +333,13 @@ Thanks for helping. The extension is small on purpose: one parser, one hover pro
 
 ### Pull requests
 
-1. **Branch from `main`** with a short kebab-case name: `feature/<topic>`, `fix/<topic>` or `docs/<topic>`.
-2. **One concern per PR.** Split unrelated changes so each is easy to review and revert.
-3. **Run the checks before you push:** `npm test && npx vscode-test --label builtin`. Run `npm run test:editor` when
-   you touch the definition lookup, and the installer test for your OS when you touch `setup/` or `agent/`.
-4. **Describe what changed and why.** For a bug fix, include the steps that reproduce it before your change. For a
-   hover change, a screenshot of the before and after hover helps.
-5. **Add a line to `CHANGELOG.md`** under the next version, and keep this README true when behaviour changes.
+1. Branch from `main` with a short kebab-case name: `feature/<topic>`, `fix/<topic>` or `docs/<topic>`.
+2. One concern per PR. Split unrelated changes so each is easy to review and revert.
+3. Run the checks before you push: `npm test && npx vscode-test --label builtin`. Run `npm run test:editor` when you
+   touch the definition lookup, and the installer test for your OS when you touch `setup/` or `agent/`.
+4. Describe what changed and why. For a bug fix, include the steps that reproduce it before your change. If the
+   tooltip changes, a screenshot of before and after helps.
+5. Add a line to `CHANGELOG.md` under the next version, and keep this README true when behaviour changes.
 
 ### Code style guidelines
 
@@ -358,22 +357,22 @@ Thanks for helping. The extension is small on purpose: one parser, one hover pro
 
 Open a [GitHub issue](https://github.com/TonyCJ7/WhatDoesThisDo/issues) with:
 
-1. **What happened and what you expected.**
-2. **The page entry and the file you hovered**, with the language and whether a language server was running for it.
-3. **What the hover showed**, as text or a screenshot.
-4. **Environment:** editor and version, operating system, and the output of `node -v` if the build is involved.
+1. What happened and what you expected.
+2. The page entry and the file you were in, with the language and whether a language server was running for it.
+3. What the tooltip showed, as text or a screenshot.
+4. Your editor and its version, the operating system, and the output of `node -v` if the build is involved.
 
-A minimal fixture that reproduces the problem in `test/fixture/` is the fastest route to a fix.
+A small fixture in `test/fixture/` that reproduces the problem is the fastest route to a fix.
 
 ---
 
 ## ❤️ Support the project
 
-If WhatDoesThisDo saves you some reading, please consider:
+If WhatDoesThisDo saves you some reading, you can:
 
-- ⭐ **[Star the repository](https://github.com/TonyCJ7/WhatDoesThisDo)** on GitHub.
-- 🤝 **[Contribute](#-contributing)** with an issue or a pull request.
-- ☕ **Donate:**
+- ⭐ [Star the repository](https://github.com/TonyCJ7/WhatDoesThisDo) on GitHub.
+- 🤝 [Contribute](#-contributing) with an issue or a pull request.
+- ☕ Buy me a coffee:
 
 <p align="center">
   <a href="https://ko-fi.com/tonycj07" target="_blank" rel="noopener noreferrer">
