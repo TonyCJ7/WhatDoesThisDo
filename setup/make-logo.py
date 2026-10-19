@@ -1,4 +1,4 @@
-"""Draws docs/assets/logo.png as terminal half-block art and writes it into the three setup scripts.
+"""Draws docs/assets/logo.png as terminal quadrant-block art, in 256 colours and true colour, and writes it into the three setup scripts.
 
 Run after changing the logo:  python3 setup/make-logo.py
 """
@@ -20,9 +20,47 @@ def xterm256(r, g, b):
     return 16 + 36 * level(r) + 6 * level(g) + level(b)
 
 
-def rows_for(width, esc):
+GLYPH = {0b0000: " ", 0b1000: "▘", 0b0100: "▝", 0b1100: "▀", 0b0010: "▖", 0b1010: "▌", 0b0110: "▞", 0b1110: "▛",
+         0b0001: "▗", 0b1001: "▚", 0b0101: "▐", 0b1101: "▜", 0b0011: "▄", 0b1011: "▙", 0b0111: "▟", 0b1111: "█"}
+MODES = ("256", "truecolor")
+
+
+def mean(colors):
+    return tuple(sum(c[i] for c in colors) // len(colors) for i in range(3))
+
+
+def error(colors, m):
+    return sum((c[i] - m[i]) ** 2 for c in colors for i in range(3))
+
+
+def fg(color, mode):
+    return f"38;5;{xterm256(*color)}" if mode == "256" else f"38;2;{color[0]};{color[1]};{color[2]}"
+
+
+def bg(color, mode):
+    return f"48;5;{xterm256(*color)}" if mode == "256" else f"48;2;{color[0]};{color[1]};{color[2]}"
+
+
+def best_split(cells):
+    best = None
+
+    for mask in range(1, 16):
+        front = [cells[i] for i in range(4) if mask >> (3 - i) & 1]
+        back = [cells[i] for i in range(4) if not mask >> (3 - i) & 1]
+        front_mean = mean(front)
+        back_mean = mean(back) if back else None
+        cost = error(front, front_mean) + (error(back, back_mean) if back else 0)
+
+        if best is None or cost < best[0]:
+            best = (cost, mask, front_mean, back_mean)
+
+    return best[1:]
+
+
+def rows_for(width, mode, esc):
+    """Each character cell holds a 2 by 2 block of pixels, drawn with the quadrant characters and two colours."""
     image = Image.open(ROOT / "docs/assets/logo.png").convert("RGBA")
-    image = image.crop(image.getchannel("A").getbbox()).resize((width, width), Image.LANCZOS)
+    image = image.crop(image.getchannel("A").getbbox()).resize((width * 2, width), Image.LANCZOS)
     pixels = image.load()
     rows = []
 
@@ -30,24 +68,20 @@ def rows_for(width, esc):
         row = "  "
         current = None
 
-        for x in range(width):
-            top = pixels[x, y]
-            bottom = pixels[x, y + 1] if y + 1 < width else (0, 0, 0, 0)
-            top_on = top[3] > 128
-            bottom_on = bottom[3] > 128
+        for x in range(0, width * 2, 2):
+            cells = [pixels[x, y], pixels[x + 1, y], pixels[x, y + 1], pixels[x + 1, y + 1]]
+            opaque = [c[3] > 128 for c in cells]
 
-            if top_on and bottom_on:
-                style = f"38;5;{xterm256(*top[:3])};48;5;{xterm256(*bottom[:3])}"
-                glyph = "▀"
-            elif top_on:
-                style = f"38;5;{xterm256(*top[:3])};49"
-                glyph = "▀"
-            elif bottom_on:
-                style = f"38;5;{xterm256(*bottom[:3])};49"
-                glyph = "▄"
+            if not any(opaque):
+                style, glyph = None, " "
+            elif not all(opaque):
+                mask = sum(bit << (3 - i) for i, bit in enumerate(opaque))
+                style = f"{fg(mean([c[:3] for c, on in zip(cells, opaque) if on]), mode)};49"
+                glyph = GLYPH[mask]
             else:
-                style = None
-                glyph = " "
+                mask, front, back = best_split([c[:3] for c in cells])
+                style = f"{fg(front, mode)};{bg(back, mode) if back else '49'}"
+                glyph = GLYPH[mask]
 
             if style != current:
                 row += f"{esc}[{style}m" if style else f"{esc}[0m"
@@ -64,7 +98,9 @@ def shell_block():
     lines = [START]
 
     for width in WIDTHS:
-        lines.append(f"LOGO_{width}='" + "\\n".join(rows_for(width, "\\033")) + "'")
+        for mode in MODES:
+            suffix = "TC" if mode == "truecolor" else "256"
+            lines.append(f"LOGO_{width}_{suffix}='" + "\\n".join(rows_for(width, mode, "\\033")) + "'")
 
     lines.append(END)
     return "\n".join(lines)
@@ -74,9 +110,11 @@ def powershell_block():
     lines = [START]
 
     for width in WIDTHS:
-        lines.append(f"$Logo{width} = @'")
-        lines.extend(rows_for(width, "<ESC>"))
-        lines.append("'@")
+        for mode in MODES:
+            suffix = "TC" if mode == "truecolor" else "256"
+            lines.append(f"$Logo{width}{suffix} = @'")
+            lines.extend(rows_for(width, mode, "<ESC>"))
+            lines.append("'@")
 
     lines.append(END)
     return "\n".join(lines)
