@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The setup scripts ask on screen: arrow keys, enter, `b` to go back, `q` to quit, and a summary that lets you change
+  any step before the files are written. Flags still skip the screens.
+
 ## 0.1.1
 
 - Search keywords so the extension is found by `WDTD`, `What does this do?`, and terms like AI documentation, agent,

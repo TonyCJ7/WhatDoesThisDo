@@ -115,8 +115,10 @@ cursor --install-extension TonyCJ7.whatdoesthisdo    # Cursor
 
 ### 2. Set up your AI agent
 
-In your own project, run the installer for your operating system. It asks which agent to set up, whether this project
-or every project, and where the pages live, shows the files it will write, and writes them after a yes.
+In your own project, run the installer for your operating system. It walks through three screens, which agent to set
+up, this project or every project, and where the pages live, with the arrow keys to move, enter to select, `b` to go
+back and `q` to quit. A summary shows every choice and the files it will write, and lets you jump back to any step
+before anything is written.
 
 macOS:
 
@@ -171,9 +173,9 @@ for it without being asked. Its text is [`agent/rule-block.md`](agent/rule-block
 The naming and folder structure the skill prescribes are the same ones described in the next section, so pages written
 by an agent and pages written by hand end up in the same places.
 
-Running the setup a second time replaces the marked block instead of adding another. From a clone of this repository
-the scripts also accept `--agent`, `--scope`, `--folder` and `--yes` (`-Agent`, `-Scope`, `-Folder`, `-Yes` on
-Windows) to skip the questions.
+Running the setup a second time replaces the marked block instead of adding another. The scripts also accept
+`--agent`, `--scope`, `--folder` and `--yes` (`-Agent`, `-Scope`, `-Folder`, `-Yes` on Windows) to skip the screens,
+for scripts and CI.
 
 ---
 

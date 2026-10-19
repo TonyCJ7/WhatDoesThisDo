@@ -59,4 +59,19 @@ if (cd "$TMP/norepo" && ${SH:-sh} "$SCRIPT" --agent both --scope project --yes >
   fail "project scope outside a repo did not fail"
 fi
 
+# 7. interactive: arrows, back, typed folder, jump from the summary, then write
+new_repo "$TMP/four"
+(cd "$TMP/four" && printf '\033[B\033[B\033[A\nb\n\n\033[B\ndocs/refs\n\n1\033[B\n\n' | WDTD_STDIN_KEYS=1 ${SH:-sh} "$SCRIPT" > "$TMP/four.out" 2>&1) || fail "interactive run exited with an error: $(tail -3 "$TMP/four.out")"
+[ -f "$TMP/four/.cursor/rules/whatdoesthisdo.mdc" ] || fail "interactive: agent changed from the summary to cursor was not applied"
+[ ! -e "$TMP/four/CLAUDE.md" ] || fail "interactive: CLAUDE.md written although the final agent was cursor"
+grep -q 'docs/refs/' "$TMP/four/.claude/skills/whatdoesthisdo/SKILL.md" || fail "interactive: typed folder not applied"
+[ -f "$TMP/four/docs/refs/README.md" ] || fail "interactive: typed folder not created"
+grep -q 'Done' "$TMP/four.out" || fail "interactive: no completion message"
+
+# 8. interactive: q on the first screen writes nothing
+new_repo "$TMP/five"
+out=$(cd "$TMP/five" && printf 'q' | WDTD_STDIN_KEYS=1 ${SH:-sh} "$SCRIPT" 2>&1) || fail "quit exited with an error"
+echo "$out" | grep -q 'nothing written' || fail "quit did not say nothing written"
+[ ! -e "$TMP/five/.claude" ] || fail "quit wrote the skill"
+
 echo "setup tests passed: $(basename "$SCRIPT")"
