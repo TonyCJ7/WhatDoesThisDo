@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- The setup scripts ask on screen: a welcome page with the logo, then arrow keys, enter, `b` to go back, `q` to quit,
+- The setup scripts ask on screen: a welcome page with the logo drawn as terminal pixel art, then arrow keys, enter, `b` to go back, `q` to quit,
   a summary that lets you change any step before the files are written, and a success page that reminds you to
   reload the editor. Flags still skip the screens.
 

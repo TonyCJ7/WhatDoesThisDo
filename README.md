@@ -308,7 +308,8 @@ it, against the fixture workspace in `test/fixture/`, in two launches configured
   definition. It needs network access and `cargo`.
 
 The installer scripts have their own tests, run against temporary repositories on each operating system by the
-Tests workflow on GitHub.
+Tests workflow on GitHub. Their welcome and success screens draw `docs/assets/logo.png` as terminal pixel art;
+`python3 setup/make-logo.py` regenerates that data inside the three scripts after a logo change.
 
 ---
 
