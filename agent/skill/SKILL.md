@@ -32,7 +32,9 @@ contradicts the code, the code is the fact and the entry is what you fix.
 In the same change as the code:
 
 - A new function, method, class or constant gets an entry on its file's page. A new source file gets a new page.
-- A changed one gets its entry re-read and corrected, including the line number in the link.
+- A changed one gets its entry re-read and corrected, including the line number in the link. The extension
+  rewrites line numbers when it sees a file change, in the editor or on disk, but only while the editor is open on
+  the project; the page you commit must be right on its own.
 - A renamed one gets its heading and link updated. A moved one moves to the page of its new file.
 - A deleted one gets its entry removed. A deleted source file gets its page removed.
 
@@ -69,6 +71,8 @@ Rules the parser follows:
 - The link is relative to the page, as in any markdown file, and ends in `#L<line>` of the declaration. From the
   references folder itself the repository root is `../../../`. Add one `../` for every subfolder the page sits in:
   `references/src/config.md` uses `../../../../`, `references/src/figma/urls.md` uses `../../../../../`.
+- Write the line. The extension finds the declaration on its own when it shows the hover, but GitHub opens the file
+  at the line written here, and a reader of the page sees where to look.
 - One heading may list several names when they share an explanation. Each gets its own link.
 
 ## What to write

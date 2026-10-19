@@ -1,0 +1,6 @@
+.a { color: var(--css-brand); padding: var(--css-gap); }
+
+:root {
+  --css-brand: #123;
+  --css-gap: 4px;
+}

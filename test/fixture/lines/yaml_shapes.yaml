@@ -1,0 +1,4 @@
+# defaults for every run
+retries:
+  yaml_limit: 3
+  yaml_delay: 100

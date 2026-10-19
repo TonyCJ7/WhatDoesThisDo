@@ -4,3 +4,5 @@ node_modules/
 test/fixture/rs/target/
 .DS_Store
 docs/assets/demo/
+test/fixture/launch/
+test/fixture/docs/whatdoesthisdo/references/launch/

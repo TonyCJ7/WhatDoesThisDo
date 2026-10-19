@@ -12,6 +12,7 @@ setup/**
 test/**
 node_modules/**
 parse.test.js
+lines.test.js
 package-lock.json
 CONTRIBUTING.md
 *.vsix

@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
 const path = require("node:path");
 const vscode = require("vscode");
 
@@ -98,4 +99,47 @@ function expectEntry(texts, shown, hidden) {
   }
 }
 
-module.exports = { fixture, hoverAt, expectEntry };
+function fragmentOf(text) {
+  const match = /^(?:### |- )\[.*?\]\(file:[^)]*#L(\d+)\)/.exec(text);
+
+  return match ? Number(match[1]) : null;
+}
+
+async function waitUntil(check, what, timeoutMs = 60000) {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const result = await check();
+
+    if (result) {
+      return result;
+    }
+
+    await sleep(500);
+  }
+
+  throw new Error(`timed out waiting for ${what}`);
+}
+
+async function hoverLine(options) {
+  return waitUntil(async () => {
+    const [text] = await hoverAt(options);
+
+    return text && fragmentOf(text) === options.line ? text : null;
+  }, `the hover on ${options.word} in ${options.file} to open line ${options.line}`);
+}
+
+function lineOf(file, snippet) {
+  const lines = fs.readFileSync(path.join(fixture, file), "utf8").split("\n");
+  const index = lines.findIndex((line) => line.includes(snippet));
+
+  assert.notEqual(index, -1, `${snippet} not found in ${file}`);
+
+  return index + 1;
+}
+
+function pageHas(page, needle) {
+  return waitUntil(() => fs.readFileSync(page, "utf8").includes(needle), `${needle} in ${path.basename(page)}`, 20000);
+}
+
+module.exports = { fixture, sleep, hoverAt, expectEntry, fragmentOf, waitUntil, hoverLine, lineOf, pageHas };

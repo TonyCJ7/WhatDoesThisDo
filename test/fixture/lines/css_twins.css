@@ -1,0 +1,9 @@
+.a { color: var(--css-twin); }
+
+:root {
+  --css-twin: #123;
+}
+
+.dark {
+  --css-twin: #eee;
+}

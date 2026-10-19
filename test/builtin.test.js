@@ -49,6 +49,46 @@ suite("without a language server", () => {
     assert.ok(text.includes(`](${expected})`), text);
   });
 
+  test("the hover offers a link to the page, under the heading, at the entry's own line", async () => {
+    const [text] = await hoverAt({ file: "plain/tool.py", needle: "fetch_user(1)", word: "fetch_user" });
+    const page = vscode.Uri.file(path.join(fixture, "docs/whatdoesthisdo/references/plain/tool.md")).with({ fragment: "L3" });
+
+    assert.equal(text.split("\n")[2], `[Open in tool.md](${page.toString()})`, text);
+  });
+
+  test("a link without a line gets the line of the declaration found in the file", async () => {
+    const [text] = await hoverAt({ file: "plain/tool.py", needle: "load_user(1)", word: "load_user" });
+    const expected = vscode.Uri.file(path.join(fixture, "plain/tool.py")).with({ fragment: "L8" }).toString();
+
+    assert.ok(text.includes(`](${expected})`), text);
+  });
+
+  test("saving a source file moves the line numbers on its page", async () => {
+    const source = path.join(fixture, "temp_lines.py");
+    const page = path.join(fixture, "docs/whatdoesthisdo/references/temp_lines.md");
+
+    fs.writeFileSync(source, "def alpha():\n    return 1\n");
+    fs.writeFileSync(page, "### [alpha()](../../../temp_lines.py#L1)\n\nTemporary.\n");
+
+    try {
+      const document = await vscode.workspace.openTextDocument(source);
+      const editor = await vscode.window.showTextDocument(document);
+
+      await editor.edit((edit) => edit.insert(new vscode.Position(0, 0), "import os\n\n\n"));
+      await document.save();
+
+      for (let attempt = 0; attempt < 40 && !fs.readFileSync(page, "utf8").includes("#L4"); attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+
+      assert.match(fs.readFileSync(page, "utf8"), /\(\.\.\/\.\.\/\.\.\/temp_lines\.py#L4\)/);
+    } finally {
+      await vscode.commands.executeCommand("workbench.action.closeAllEditors");
+      fs.rmSync(source, { force: true });
+      fs.rmSync(page, { force: true });
+    }
+  });
+
   test("python: a name with one entry on a page in a subfolder shows it", async () => {
     expectEntry(await hoverAt({ file: "plain/tool.py", needle: "fetch_user(1)", word: "fetch_user" }), "Fetches one user");
   });

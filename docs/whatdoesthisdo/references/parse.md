@@ -12,17 +12,20 @@ Every `[name(params)](link)` on a `### ` line, as `{ name, link }`. The name is 
 list, backticks stripped, so `` [`$user`](...) `` and `[save(id)](...)` both work. A heading may hold several links;
 each becomes its own entry with the same text.
 
-### [addEntries(entries, links, lines)](../../../parse.js#L17)
+### [addEntries(entries, links, openedAt, lines)](../../../parse.js#L17)
 
-Appends one entry per key of every link, all sharing the joined and trimmed `lines`. Appends nothing when there are
-no links, which is how text before the first heading and text under a `## ` title are dropped.
+Appends one entry per key of every link, all sharing the joined and trimmed `lines` and `openedAt`, the 1-based
+page line of the heading or bullet that opened them. Appends nothing when there are no links, which is how text
+before the first heading and text under a `## ` title are dropped.
 
 ### [parseReference(markdown)](../../../parse.js#L27)
 
-A page's entries as `[{ name, link, text }]`, in page order.
+A page's entries as `[{ name, link, line, text }]`, in page order.
 
 - A `### ` heading opens an entry that runs to the next `### `, `## ` or constant bullet.
 - A `` - [`NAME`](link): text `` bullet is a one-line entry for a constant.
+- `line` is where the heading or bullet sits on the page. The hover's `Open in` link and the save listener's
+  rewrite both go to that line.
 - The text is the heading line and everything under it. That is what the hover shows, heading included, so the link
   is there to click.
 

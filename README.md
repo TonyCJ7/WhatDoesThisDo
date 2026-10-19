@@ -100,8 +100,18 @@ every entry links to its source line.
 1. You hold the mouse over a name in any file.
 2. The extension looks the word up in its index of `docs/whatdoesthisdo/references/`, reads the page that holds it,
    and adds the entry to the editor's tooltip. The heading of the entry is a link: click it and the source file opens
-   at the declaration, with or without a language server.
+   at the declaration, with or without a language server. Under the heading, `Open in <page>.md` opens the page at
+   the entry, for when the text needs a correction.
 3. If no page has an entry for that word, the extension adds nothing and the tooltip stays as it was.
+
+The extension finds the line a heading opens at hover time: the language server's answer first, then a search for
+the declaration in the linked file, and only then the `#L` written on the page. A link can leave the line out. When a file declares a name twice, as with overloads or a function and a method of
+the same name, the search opens the first declaration and a language server opens the one the cursor refers to.
+The extension also rewrites the `#L` numbers on the pages themselves, so they stay
+right after lines move: when you save a source file, when a file changes on disk because an agent edited it from a
+terminal or a `git pull` landed, when the window opens, and when it regains focus. The command
+`WhatDoesThisDo: Update line numbers` does the same for every page at once. One setting turns the automatic rewrites
+off.
 
 When several files document the same name, the extension asks the language server where the symbol under the cursor
 is defined and shows the entry for that file. Without a server, or when no entry points at the file the server named,
@@ -277,7 +287,9 @@ Build the two error objects. Every name in the heading gets this entry.
 - Links are relative to the page, as in any markdown file, and end in `#L<line>` of the declaration. From the
   references folder itself the repository root is `../../../`. Add one `../` for each subfolder the page sits in, so
   `references/src/config.md` uses `../../../../`. The links are clickable in the tooltip, and the file part of the link
-  is what the extension compares with the language server's answer.
+  is what the extension compares with the language server's answer. The `#L` part is optional: the extension finds
+  the declaration itself and keeps the number current when the source file is saved. It is still worth writing,
+  because GitHub opens the file at that line.
 - A heading can list several names when they share an explanation. Each gets its own link.
 
 ### What makes a good entry
@@ -297,6 +309,7 @@ skill in `agent/skill/SKILL.md` spells this out for the agent, with a before and
 | Setting | Default | Meaning |
 |---|---|---|
 | `whatDoesThisDo.folder` | `docs/whatdoesthisdo/references` | Folder, relative to each workspace folder, whose markdown pages hold the entries. Subfolders are read. In a multi-root workspace each folder has its own. |
+| `whatDoesThisDo.updateLines` | `true` | Keep the `#L` numbers on the pages pointing at the declarations: on save, when a file changes on disk, at launch and on focus. Turn it off to keep the pages untouched; the command `WhatDoesThisDo: Update line numbers` still works. |
 
 ---
 
@@ -333,9 +346,22 @@ it, against the fixture workspace in `test/fixture/`, in two launches configured
 - `builtin` runs with other extensions disabled. TypeScript and JavaScript use the bundled language server and pick
   the entry by definition. Python, Rust, Ruby, shell, PHP, Go, YAML and plain text have no server there, so they show
   every entry for the name, same file type first, and the tests check each language's word shape. The launch also
-  edits a page mid-run to check that the index refreshes, and reads pages from subfolders.
+  edits a page mid-run to check that the index refreshes, and reads pages from subfolders. `test/lines.test.js` then
+  takes nineteen languages, from Java and C# to Clojure and Haskell, through every case that depends on the
+  language: a function, a method inside a class or module, a constant, and a type where the language has one, each
+  hovered from a use that comes before the declaration against a page whose line is wrong or missing; then a save
+  that must move the page line, a rewrite of the file on disk by another program that must do the same through the
+  watcher, and the command on a page that drifted. A page made stale before the editor starts checks the sync at
+  launch. The cases that share one code path for every language, an open page keeping its unsaved edits, a name no
+  longer in the file, several pages for one file, a page's own save and the setting turned off, run once.
 - `servers` installs Pylance and rust-analyzer from the marketplace and checks that Python and Rust pick the entry by
-  definition. It needs network access and `cargo`.
+  definition, that the server's line wins where a text search would not find it, and that saving a Python or Rust
+  file moves the line on its page and back. It needs network access and `cargo`.
+
+Every pull request runs these on GitHub. The Tests workflow starts the parser tests, the `builtin` editor launch and
+the three installer tests on each pull request and on every push to `main`, and the branch rules do not let a pull
+request merge until those five jobs pass. The `servers` launch runs there too, but as an advisory job, because it
+downloads two extensions from the marketplace on each run.
 
 The installer scripts have their own tests, run against temporary repositories on each operating system by the
 Tests workflow on GitHub. Their welcome and success screens draw `docs/assets/logo.png` as terminal pixel art;
@@ -357,7 +383,8 @@ checkout too.
 | `sh setup/test-setup.sh setup/setup-macos.sh` | Installer test, also with `setup-linux.sh` or `SH=dash` |
 | `pwsh setup/test-setup.ps1` | Windows installer test |
 
-**Verify before opening a PR:** `npm test && npx vscode-test --label builtin`
+**Verify before opening a PR:** `npm test && npx vscode-test --label builtin`. These are the checks GitHub requires on
+the pull request, so a branch that fails them locally will not merge.
 
 ---
 
@@ -369,8 +396,9 @@ Thanks for helping. The extension is small on purpose: one parser, one hover pro
 
 1. Branch from `main` with a short kebab-case name: `feature/<topic>`, `fix/<topic>` or `docs/<topic>`.
 2. One concern per PR. Split unrelated changes so each is easy to review and revert.
-3. Run the checks before you push: `npm test && npx vscode-test --label builtin`. Run `npm run test:editor` when you
-   touch the definition lookup, and the installer test for your OS when you touch `setup/` or `agent/`.
+3. Run the checks before you push: `npm test && npx vscode-test --label builtin`. The pull request cannot merge until
+   the same checks pass on GitHub. Run `npm run test:editor` when you touch the definition or line lookup, and the
+   installer test for your OS when you touch `setup/` or `agent/`.
 4. Describe what changed and why. For a bug fix, include the steps that reproduce it before your change. If the
    tooltip changes, a screenshot of before and after helps.
 5. Add a line to `CHANGELOG.md` under the next version, and keep this README true when behaviour changes.
@@ -382,7 +410,7 @@ Thanks for helping. The extension is small on purpose: one parser, one hover pro
 | **Comments** | Clear names and small functions instead of comments. A comment is for a why the code cannot express. |
 | **Dependencies** | None at runtime. A dev dependency is fine when it earns its place; open an issue first for a new one. |
 | **Pure logic** | Anything that does not need the `vscode` module goes in `parse.js` or a new pure module, with a test in `parse.test.js`. |
-| **Editor behaviour** | Gets a case in `test/builtin.test.js` or `test/servers.test.js`, with a fixture file and a page entry rather than a mock. |
+| **Editor behaviour** | Gets a case in `test/builtin.test.js`, `test/lines.test.js` or `test/servers.test.js`, with a fixture file and a page entry rather than a mock. A new language gets a file in `test/fixture/lines/` with a call before the declaration and a page with a wrong line. |
 | **Installers** | Three separate scripts by design, one per operating system. A change to the questions or the written files is made in all three; the Tests workflow runs each. |
 | **Agent content** | `agent/` is the single source for the skill, rule and prompt. The scripts copy it, they do not carry their own text. |
 | **Scope** | The smallest change that solves the request. No speculative options or abstractions without a second user. |

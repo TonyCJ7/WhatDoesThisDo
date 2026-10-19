@@ -2,7 +2,7 @@
   "name": "whatdoesthisdo",
   "displayName": "WhatDoesThisDo",
   "description": "Hover over one of your own functions or constants and read what it is for, from markdown pages in the repository that your AI agent keeps up to date. Works in every language.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "TonyCJ7",
   "license": "MIT",
   "repository": {
@@ -29,12 +29,24 @@
           "type": "string",
           "default": "docs/whatdoesthisdo/references",
           "description": "Folder, relative to each workspace folder, whose markdown pages hold one entry per function or constant. Subfolders are read too."
+        },
+        "whatDoesThisDo.updateLines": {
+          "type": "boolean",
+          "default": true,
+          "description": "Keep the #L line numbers on the pages pointing at the declarations: rewrite them when a source file is saved or changes on disk, and when the window opens or regains focus."
         }
       }
-    }
+    },
+    "commands": [
+      {
+        "command": "whatDoesThisDo.updateLines",
+        "category": "WhatDoesThisDo",
+        "title": "Update line numbers"
+      }
+    ]
   },
   "scripts": {
-    "test": "node --test parse.test.js",
+    "test": "node --test parse.test.js lines.test.js",
     "test:editor": "vscode-test",
     "package": "vsce package"
   },

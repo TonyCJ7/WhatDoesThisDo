@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.3
+
+- The hover has a second link under the heading, `Open in <page>.md`, which opens the page at the entry.
+- The heading opens the declaration's current line: the language server's answer, then a search of the linked file,
+  and only then the `#L` on the page. A link may leave the line out.
+- The `#L` numbers on the pages are rewritten when a source file is saved, when it changes on disk through an agent
+  or a `git pull`, when the window opens and when it regains focus. Setting `whatDoesThisDo.updateLines` turns that
+  off; the command `WhatDoesThisDo: Update line numbers` does it for every page at once.
+
 ## 0.1.2
 
 - Fixed: clicking an entry's heading in the hover opened an empty editor named after the `#L` fragment. Links are now

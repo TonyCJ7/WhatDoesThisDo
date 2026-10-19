@@ -72,9 +72,16 @@ test("registers a constant from a bullet with a backticked link", () => {
     {
       name: "FILE_KEY",
       link: "../../../src/figma/urls.ts#L4",
+      line: 32,
       text: "- [`FILE_KEY`](../../../src/figma/urls.ts#L4): alphanumeric, 10 to 64 characters.",
     },
   ]);
+});
+
+test("records the page line of the heading that opens an entry", () => {
+  assert.equal(entriesNamed("loadConfig")[0].line, 7);
+  assert.equal(entriesNamed("readPositiveNumber")[0].line, 14);
+  assert.equal(entriesNamed("notANodeId")[0].line, 18);
 });
 
 test("knows nothing about words that have no entry", () => {
