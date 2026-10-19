@@ -38,8 +38,10 @@ done
 
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
   BOLD=$(printf '\033[1m'); DIM=$(printf '\033[2m'); CYAN=$(printf '\033[36m'); GREEN=$(printf '\033[32m'); YELLOW=$(printf '\033[33m'); RESET=$(printf '\033[0m')
+  PINK=$(printf '\033[95m'); ORANGE=$(printf '\033[33m'); LIME=$(printf '\033[92m'); BLUE=$(printf '\033[94m'); PURPLE=$(printf '\033[35m')
 else
   BOLD=""; DIM=""; CYAN=""; GREEN=""; YELLOW=""; RESET=""
+  PINK=""; ORANGE=""; LIME=""; BLUE=""; PURPLE=""
 fi
 
 TMP=$(mktemp -d)
@@ -145,6 +147,33 @@ clear_screen() {
 }
 
 # ---------- screens ----------
+
+logo() {
+  printf '  %s█   █%s  %s███ %s  %s█████%s  %s███ %s  %s ███ %s\n' "$PINK" "$RESET" "$ORANGE" "$RESET" "$LIME" "$RESET" "$BLUE" "$RESET" "$PURPLE" "$RESET"
+  printf '  %s█   █%s  %s█  █%s  %s  █  %s  %s█  █%s  %s█   █%s\n' "$PINK" "$RESET" "$ORANGE" "$RESET" "$LIME" "$RESET" "$BLUE" "$RESET" "$PURPLE" "$RESET"
+  printf '  %s█ █ █%s  %s█  █%s  %s  █  %s  %s█  █%s  %s   █ %s\n' "$PINK" "$RESET" "$ORANGE" "$RESET" "$LIME" "$RESET" "$BLUE" "$RESET" "$PURPLE" "$RESET"
+  printf '  %s██ ██%s  %s█  █%s  %s  █  %s  %s█  █%s  %s  █  %s\n' "$PINK" "$RESET" "$ORANGE" "$RESET" "$LIME" "$RESET" "$BLUE" "$RESET" "$PURPLE" "$RESET"
+  printf '  %s█   █%s  %s███ %s  %s  █  %s  %s███ %s  %s  █  %s\n' "$PINK" "$RESET" "$ORANGE" "$RESET" "$LIME" "$RESET" "$BLUE" "$RESET" "$PURPLE" "$RESET"
+}
+
+screen_welcome() {
+  while :; do
+    clear_screen
+    logo
+    printf '\n  %sWhatDoesThisDo setup%s\n\n' "$BOLD" "$RESET"
+    printf '  This sets up your AI agent to keep the documentation pages in step with the code.\n'
+    printf '  It installs a skill that tells Claude Code and Cursor how the pages are named and\n'
+    printf '  written, and a rule that makes the agent read an entry before changing code and\n'
+    printf '  update it in the same change.\n\n'
+    printf '  Three short steps. Nothing is written until you confirm on the summary.\n\n'
+    printf '  %senter start · q quit%s\n' "$DIM" "$RESET"
+
+    case "$(read_key)" in
+      enter) return 0 ;;
+      quit) return 1 ;;
+    esac
+  done
+}
 
 header() {
   printf '%sWhatDoesThisDo setup%s  %s%s%s\n\n' "$BOLD" "$RESET" "$DIM" "$1" "$RESET"
@@ -256,6 +285,13 @@ scope_label() {
 
 interactive() {
   open_keys
+
+  if ! screen_welcome; then
+    clear_screen
+    echo "nothing written"
+    exit 0
+  fi
+
   screen=1
   from_summary=0
 
@@ -274,7 +310,7 @@ interactive() {
         printf '%senter write · 1 2 3 change a step · q quit%s\n' "$DIM" "$RESET"
 
         case "$(read_key)" in
-          enter) clear_screen; return ;;
+          enter) clear_screen; INTERACTIVE_DONE=1; return ;;
           1) screen=1; from_summary=1; continue ;;
           2) screen=2; from_summary=1; continue ;;
           3) screen=3; from_summary=1; continue ;;
@@ -373,12 +409,35 @@ write_files() {
     printf '# Reference pages\n\nMarkdown pages read by the WhatDoesThisDo extension. One page per source file, at the same path as the file with a `.md` extension,\none entry per function or constant. The `whatdoesthisdo` skill describes the format.\n' > "$ROOT/$FOLDER/README.md"
   fi
 
+  [ "${INTERACTIVE_DONE:-0}" = 1 ] && return 0
   printf '%sDone.%s Written:\n%s\n' "$GREEN" "$RESET" "$(plan_lines | sed 's/  (only if missing)//')"
 
   if [ "$AGENT" != claude ] && [ "$SCOPE" = global ]; then
     printf '\n%sCursor has no global rules file.%s Paste this into Cursor Settings > Rules > User Rules:\n\n' "$YELLOW" "$RESET"
     substitute "$SRC/cursor-rule.mdc" | awk 'f && NF { print } /^---$/ { c++; if (c == 2) f = 1 }'
   fi
+}
+
+spin_while_writing() {
+  frames='|/-\\'
+  i=0
+
+  while kill -0 "$1" 2>/dev/null || [ "$i" -lt 4 ]; do
+    frame=$(printf '%s' "$frames" | cut -c$(( i % 4 + 1 )))
+    printf '\r  %s%s%s Writing files…' "$CYAN" "$frame" "$RESET"
+    i=$((i + 1))
+    sleep 0.1
+  done
+
+  printf '\r                    \r'
+}
+
+show_success() {
+  logo
+  printf '\n  %s✔ Set up.%s Written:\n%s\n\n' "$GREEN" "$RESET" "$(plan_lines | sed 's/  (only if missing)//')"
+  printf '  %sNext:%s reload your editor so the skill and rule are picked up.\n' "$BOLD" "$RESET"
+  printf '    VS Code and Cursor: Command Palette, "Developer: Reload Window"\n'
+  printf '    Claude Code: start a new session\n'
 }
 
 # ---------- main ----------
@@ -404,4 +463,18 @@ if [ "$YES" = 1 ]; then
   printf 'Files to write:\n%s\n' "$(plan_lines)"
 fi
 
-write_files
+if [ "${INTERACTIVE_DONE:-0}" = 1 ]; then
+  write_log="$TMP/write.log"
+  (write_files > "$write_log" 2>&1) &
+  spin_while_writing $!
+  wait $! || { cat "$write_log"; exit 1; }
+  clear_screen
+  show_success
+
+  if [ "$AGENT" != claude ] && [ "$SCOPE" = global ]; then
+    printf '\n%sCursor has no global rules file.%s Paste this into Cursor Settings > Rules > User Rules:\n\n' "$YELLOW" "$RESET"
+    substitute "$SRC/cursor-rule.mdc" | awk 'f && NF { print } /^---$/ { c++; if (c == 2) f = 1 }'
+  fi
+else
+  write_files
+fi

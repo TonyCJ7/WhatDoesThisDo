@@ -13,6 +13,7 @@ $ErrorActionPreference = "Stop"
 $RawUrl = "https://raw.githubusercontent.com/TonyCJ7/WhatDoesThisDo/main/agent"
 $DefaultFolder = "docs/whatdoesthisdo/references"
 $ScriptedKeys = $null
+$script:InteractiveDone = $false
 if ($env:WDTD_KEYS) { $ScriptedKeys = [System.Collections.Generic.Queue[char]]::new([char[]] $env:WDTD_KEYS) }
 
 $tmp = Join-Path ([IO.Path]::GetTempPath()) ("whatdoesthisdo-" + [Guid]::NewGuid().ToString("N"))
@@ -85,6 +86,43 @@ try {
   function Clear-Screen { try { [Console]::Clear() } catch { } }
 
   # ---------- screens ----------
+
+  function Show-Logo {
+    $rows = @(
+      @("█   █", "███ ", "█████", "███ ", " ███ "),
+      @("█   █", "█  █", "  █  ", "█  █", "█   █"),
+      @("█ █ █", "█  █", "  █  ", "█  █", "   █ "),
+      @("██ ██", "█  █", "  █  ", "█  █", "  █  "),
+      @("█   █", "███ ", "  █  ", "███ ", "  █  ")
+    )
+    $colors = @("Magenta", "DarkYellow", "Green", "Blue", "DarkMagenta")
+    foreach ($row in $rows) {
+      Write-Host "  " -NoNewline
+      for ($i = 0; $i -lt 5; $i++) { Write-Host $row[$i] -ForegroundColor $colors[$i] -NoNewline; Write-Host "  " -NoNewline }
+      Write-Host ""
+    }
+  }
+
+  function Show-WelcomeScreen {
+    while ($true) {
+      Clear-Screen
+      Show-Logo
+      Write-Host ""
+      Write-Host "  WhatDoesThisDo setup" -ForegroundColor White
+      Write-Host ""
+      Write-Host "  This sets up your AI agent to keep the documentation pages in step with the code."
+      Write-Host "  It installs a skill that tells Claude Code and Cursor how the pages are named and"
+      Write-Host "  written, and a rule that makes the agent read an entry before changing code and"
+      Write-Host "  update it in the same change."
+      Write-Host ""
+      Write-Host "  Three short steps. Nothing is written until you confirm on the summary."
+      Write-Host ""
+      Write-Host "  enter start · q quit" -ForegroundColor DarkGray
+      $key = Read-Key
+      if ($key -eq "enter") { return $true }
+      if ($key -eq "quit") { return $false }
+    }
+  }
 
   function Show-Header([string] $Step) {
     Write-Host "WhatDoesThisDo setup" -ForegroundColor White -NoNewline
@@ -165,6 +203,7 @@ try {
   }
 
   function Invoke-Interactive {
+    if (-not (Show-WelcomeScreen)) { Clear-Screen; Write-Output "nothing written"; return $false }
     $screen = 1
     $fromSummary = $false
     while ($true) {
@@ -180,7 +219,7 @@ try {
         Write-Host ""
         Write-Host "enter write · 1 2 3 change a step · q quit" -ForegroundColor DarkGray
         $key = Read-Key
-        if ($key -eq "enter") { Clear-Screen; return $true }
+        if ($key -eq "enter") { Clear-Screen; $script:InteractiveDone = $true; return $true }
         if ($key -eq "quit") { Clear-Screen; Write-Output "nothing written"; return $false }
         if ($key -in @("1", "2", "3")) { $screen = [int] $key; $fromSummary = $true }
         continue
@@ -230,6 +269,7 @@ try {
         Write-Text $readme "# Reference pages`n`nMarkdown pages read by the WhatDoesThisDo extension. One page per source file, at the same path as the file with a ``.md`` extension,`none entry per function or constant. The ``whatdoesthisdo`` skill describes the format.`n"
       }
     }
+    if ($script:InteractiveDone) { return }
     Write-Output "Done. Written:"
     Get-PlanLines | ForEach-Object { Write-Output ($_ -replace "  \(only if missing\)", "") }
     if ($script:Agent -ne "claude" -and $script:Scope -eq "global") {
@@ -261,7 +301,37 @@ try {
   }
 
   if ($Yes) { Write-Output "Files to write:"; Get-PlanLines | ForEach-Object { Write-Output $_ } }
-  Write-Files
+
+  if ($script:InteractiveDone) {
+    $frames = @("|", "/", "-", "\")
+    $job = Start-Job -ScriptBlock { Start-Sleep -Milliseconds 300 }
+    $i = 0
+    while ($job.State -eq "Running" -or $i -lt 4) {
+      Write-Host "`r  $($frames[$i % 4]) Writing files…" -ForegroundColor Cyan -NoNewline
+      $i++
+      Start-Sleep -Milliseconds 100
+    }
+    Remove-Job $job -Force
+    Write-Files
+    Clear-Screen
+    Show-Logo
+    Write-Host ""
+    Write-Output "  Set up. Written:"
+    Get-PlanLines | ForEach-Object { Write-Output ($_ -replace "  \(only if missing\)", "") }
+    Write-Output ""
+    Write-Output "  Next: reload your editor so the skill and rule are picked up."
+    Write-Output '    VS Code and Cursor: Command Palette, "Developer: Reload Window"'
+    Write-Output "    Claude Code: start a new session"
+    if ($script:Agent -ne "claude" -and $script:Scope -eq "global") {
+      Write-Output ""
+      Write-Output "Cursor has no global rules file. Paste this into Cursor Settings > Rules > User Rules:"
+      Write-Output ""
+      $body = (Get-Substituted (Join-Path $src "cursor-rule.mdc")) -split "(?m)^---\s*$"
+      Write-Output $body[-1].Trim()
+    }
+  } else {
+    Write-Files
+  }
 } finally {
   Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
 }

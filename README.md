@@ -115,10 +115,11 @@ cursor --install-extension TonyCJ7.whatdoesthisdo    # Cursor
 
 ### 2. Set up your AI agent
 
-In your own project, run the installer for your operating system. It walks through three screens, which agent to set
-up, this project or every project, and where the pages live, with the arrow keys to move, enter to select, `b` to go
-back and `q` to quit. A summary shows every choice and the files it will write, and lets you jump back to any step
-before anything is written.
+In your own project, run the installer for your operating system. A welcome screen says what it does, then three
+screens ask which agent to set up, this project or every project, and where the pages live, with the arrow keys to
+move, enter to select, `b` to go back and `q` to quit. A summary shows every choice and the files it will write and
+lets you jump back to any step. After writing it reminds you to reload the editor, since skills and rules are read
+when a session starts.
 
 macOS:
 

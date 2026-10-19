@@ -61,7 +61,7 @@ try {
   if (-not $failed) { Fail "project scope outside a repo did not fail" }
 
   NewRepo "$tmp/four"
-  $keys = "$([char]27)[B$([char]27)[B$([char]27)[A`nb`n`n$([char]27)[B`ndocs/refs`n`n1$([char]27)[B`n`n"
+  $keys = "`n$([char]27)[B$([char]27)[B$([char]27)[A`nb`n`n$([char]27)[B`ndocs/refs`n`n1$([char]27)[B`n`n"
   $env:WDTD_KEYS = $keys
   Push-Location "$tmp/four"
   try { $out = (& $script) -join "`n" } finally { Pop-Location; Remove-Item Env:WDTD_KEYS }
@@ -69,7 +69,8 @@ try {
   if (Test-Path "$tmp/four/CLAUDE.md") { Fail "interactive: CLAUDE.md written although the final agent was cursor" }
   if ((Get-Content -Raw "$tmp/four/.claude/skills/whatdoesthisdo/SKILL.md") -notmatch "docs/refs/") { Fail "interactive: typed folder not applied" }
   if (-not (Test-Path "$tmp/four/docs/refs/README.md")) { Fail "interactive: typed folder not created" }
-  if ($out -notmatch "Done") { Fail "interactive: no completion message" }
+  if ($out -notmatch "Set up") { Fail "interactive: no success message" }
+  if ($out -notmatch "Reload Window") { Fail "interactive: no reload reminder" }
 
   NewRepo "$tmp/five"
   $env:WDTD_KEYS = "q"
