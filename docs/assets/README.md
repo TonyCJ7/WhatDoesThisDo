@@ -6,6 +6,6 @@
 
 `icon.png`: the same logo at 256 px, the extension's icon in the marketplace and the Extensions view. `package.json` points at it, and `.vscodeignore` lets it into the package.
 
-`hover-demo.gif`: a short screen recording, about ten seconds, of a source file in the editor. The mouse rests on a
-function name, the hover shows the entry from the reference page with its link, the recording cuts to the page in
-`docs/whatdoesthisdo/references/`, the text is edited, and a second hover shows the new text.
+`hover-demo.gif`: an 18 second recording. A line is typed into the `rankEntries` entry on
+`docs/whatdoesthisdo/references/extension.md`, the hover on `rankEntries` in `extension.js` shows the new line, and a
+click on the entry's heading jumps to the declaration.

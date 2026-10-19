@@ -2,3 +2,5 @@
 node_modules/
 .vscode-test/
 test/fixture/rs/target/
+.DS_Store
+docs/assets/demo/

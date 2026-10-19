@@ -31,6 +31,7 @@
 
 - [The problem](#-the-problem)
 - [What is WhatDoesThisDo?](#-what-is-whatdoesthisdo)
+- [Why not comments or docstrings?](#-why-not-comments-or-docstrings)
 - [How it works](#-how-it-works)
 - [Getting started](#-getting-started)
 - [Let your AI agent write the documentation](#-let-your-ai-agent-write-the-documentation)
@@ -75,17 +76,31 @@ knows why.
 
 ---
 
+## 💬 Why not comments or docstrings?
+
+Keep your docstrings. They are the right place for the contract of a public function, and the editor already shows
+them on hover. WhatDoesThisDo holds what docstrings rarely do: why a function exists, why a constant has the value it
+has, what the function refuses. It also covers the internal functions nobody bothers to document, and languages with
+no docstrings at all, such as shell, YAML and CSS.
+
+The pages are separate from the code on purpose. The source file stays readable, a change to a page shows up in a
+pull request as prose a reviewer can read, and the pages work as a guide on GitHub without opening the code. The agent
+rule gets a concrete file to open before it changes a function, which comments spread through the file cannot give
+it. When two files define a function with the same name, the extension still knows which entry you mean, because
+every entry links to its source line.
+
+---
+
 ## 🎬 How it works
 
-<!-- Recording to add here once made; docs/assets/README.md describes it:
 <p align="center">
-  <img src="docs/assets/hover-demo.gif" alt="Hovering a function shows its entry from the reference page; editing the page updates the hover" width="720">
+  <img src="docs/assets/hover-demo.gif" alt="A line is typed into the reference page, the hover on the function shows it, and a click on the heading jumps to the declaration" width="720">
 </p>
--->
 
 1. You hold the mouse over a name in any file.
 2. The extension looks the word up in its index of `docs/whatdoesthisdo/references/`, reads the page that holds it,
-   and adds the entry below the editor's own tooltip. The heading of the entry links to the source line.
+   and adds the entry to the editor's tooltip. The heading of the entry is a link: click it and the source file opens
+   at the declaration, with or without a language server.
 3. If no page has an entry for that word, the extension adds nothing and the tooltip stays as it was.
 
 When several files document the same name, the extension asks the language server where the symbol under the cursor
@@ -270,6 +285,11 @@ Build the two error objects. Every name in the heading gets this entry.
 Two to five lines a reader can trust: what it is for, what goes in, what comes out, what it refuses and with which
 message. Write down the intent. The code already shows the mechanics.
 
+Write it the way the engineer who built the function would answer a colleague asking what it does: name the caller it
+serves, the real default, the actual error text, and the reason behind a value when there is one. "Reads the Figma
+file key out of the URL a user pasted" tells a reader something that "Extracts a key from a string" does not. The
+skill in `agent/skill/SKILL.md` spells this out for the agent, with a before and after.
+
 ---
 
 ## ⚙️ Settings
@@ -320,6 +340,9 @@ it, against the fixture workspace in `test/fixture/`, in two launches configured
 The installer scripts have their own tests, run against temporary repositories on each operating system by the
 Tests workflow on GitHub. Their welcome and success screens draw `docs/assets/logo.png` as terminal pixel art;
 `python3 setup/make-logo.py` (Pillow and numpy) regenerates that data inside the three scripts after a logo change.
+
+The repository documents its own two source files under `docs/whatdoesthisdo/references/`, so the hover works in this
+checkout too.
 
 ---
 

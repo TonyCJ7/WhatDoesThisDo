@@ -1,10 +1,18 @@
 # Changelog
 
-## Unreleased
+## 0.1.2
+
+- Fixed: clicking an entry's heading in the hover opened an empty editor named after the `#L` fragment. Links are now
+  absolute file links with the line as the fragment, so the click opens the source at the declaration.
 
 - The setup scripts ask on screen: a welcome page with the logo drawn as terminal pixel art, then arrow keys, enter, `b` to go back, `q` to quit,
   a summary that lets you change any step before the files are written, and a success page that reminds you to
-  reload the editor. Flags still skip the screens.
+  reload the editor. Flags still skip the screens. Ctrl+C leaves the macOS and Linux scripts at any point and
+  restores the terminal; `q` on the Windows welcome screen exits cleanly.
+- The skill tells the agent how to write an entry so it reads like the engineer who built the function wrote it,
+  with a before and after.
+- The README shows a recording of the hover, the page edit and the click to the declaration, and the repository
+  documents its own source files under `docs/whatdoesthisdo/references/`.
 
 ## 0.1.1
 

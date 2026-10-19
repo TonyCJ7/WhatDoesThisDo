@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const vscode = require("vscode");
 
 const { fixture, hoverAt, expectEntry } = require("./helpers.js");
 
@@ -39,6 +40,13 @@ suite("without a language server", () => {
     assert.equal(texts.length, 2);
     expectEntry(texts, "Totals in A");
     expectEntry(texts, "Totals in B");
+  });
+
+  test("an entry's link becomes an absolute file link with the line as its fragment", async () => {
+    const [text] = await hoverAt({ file: "plain/tool.py", needle: "fetch_user(1)", word: "fetch_user" });
+    const expected = vscode.Uri.file(path.join(fixture, "plain/tool.py")).with({ fragment: "L1" }).toString();
+
+    assert.ok(text.includes(`](${expected})`), text);
   });
 
   test("python: a name with one entry on a page in a subfolder shows it", async () => {

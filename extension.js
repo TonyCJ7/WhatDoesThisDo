@@ -4,6 +4,8 @@ const vscode = require("vscode");
 
 const { parseReference } = require("./parse.js");
 
+const MARKDOWN_LINK = /\]\(([^)\s]+)\)/g;
+const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 const pagesByFolder = new Map();
 
 function referencesDir(folder) {
@@ -88,12 +90,21 @@ async function rankEntries(candidates, document, position) {
   return [...sameExtension, ...others];
 }
 
+function absoluteLinks(text, pageDir) {
+  return text.replace(MARKDOWN_LINK, (match, href) => {
+    if (HAS_SCHEME.test(href)) {
+      return match;
+    }
+
+    const [file, fragment = ""] = href.split("#");
+    const uri = vscode.Uri.file(path.resolve(pageDir, file)).with({ fragment });
+
+    return `](${uri.toString()})`;
+  });
+}
+
 function markdownFor(entry) {
-  const markdown = new vscode.MarkdownString(entry.text);
-
-  markdown.baseUri = vscode.Uri.file(path.join(entry.pageDir, path.sep));
-
-  return markdown;
+  return new vscode.MarkdownString(absoluteLinks(entry.text, entry.pageDir));
 }
 
 async function provideHover(document, position) {

@@ -2,7 +2,7 @@
   "name": "whatdoesthisdo",
   "displayName": "WhatDoesThisDo",
   "description": "Hover over one of your own functions or constants and read what it is for, from markdown pages in the repository that your AI agent keeps up to date. Works in every language.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "TonyCJ7",
   "license": "MIT",
   "repository": {
