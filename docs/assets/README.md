@@ -6,6 +6,8 @@
 
 `icon.png`: the same logo at 256 px, the extension's icon in the marketplace and the Extensions view. `package.json` points at it, and `.vscodeignore` lets it into the package.
 
-`hover-demo.gif`: an 18 second recording. A line is typed into the `rankEntries` entry on
-`docs/whatdoesthisdo/references/extension.md`, the hover on `rankEntries` in `extension.js` shows the new line, and a
-click on the entry's heading jumps to the declaration.
+`hover-demo.gif`: a 30 second recording. The hover on the `rankEntries` call in `extension.js` shows its entry, a
+click on `Open in extension.md` opens the page at the entry, a line is typed into it and saved, the hover shows the
+new line, and a click on the entry's heading jumps to the declaration. Each click is marked by a ring drawn on the
+frames afterwards. The recording harness in `demo/` is kept out of git; it runs VS Code under Xvfb in an Ubuntu
+container and drives it from a test.

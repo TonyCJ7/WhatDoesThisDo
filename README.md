@@ -67,6 +67,8 @@ knows why.
   extension asks the editor what the word under the cursor is, using that language's own rules.
 - The pages are plain markdown. They read well on GitHub, their links jump to the source line, and they show up in
   pull request diffs like any other file.
+- The hover is a way in. Its heading opens the declaration, and `Open in <page>.md` opens the entry for editing. The
+  extension keeps the line numbers on the pages current as the code moves, so neither link goes stale.
 - The agent keeps them true. A one-line setup installs a skill and a rule for Claude Code and Cursor, so the agent
   reads the entry before changing a function and updates it afterwards, in the same change.
 - When a language server is running, the extension knows which definition you mean. Two functions called `save` in
@@ -94,7 +96,7 @@ every entry links to its source line.
 ## 🎬 How it works
 
 <p align="center">
-  <img src="docs/assets/hover-demo.gif" alt="A line is typed into the reference page, the hover on the function shows it, and a click on the heading jumps to the declaration" width="720">
+  <img src="docs/assets/hover-demo.gif" alt="The hover on a function call shows its entry, a click on Open in extension.md opens the page at the entry, a line is typed and saved, the hover shows the new line, and a click on the heading jumps to the declaration" width="720">
 </p>
 
 1. You hold the mouse over a name in any file.
@@ -251,8 +253,9 @@ Inside a page:
 - Each function, method or class is a `### ` entry, in the order it appears in the source.
 - Constants go at the end under a `## Constants` heading, one bullet each.
 
-The extension does not enforce this layout. It reads any `.md` file in the folder or its subfolders. The layout is
-there so that a reader, or an agent, can find the page for a file without searching.
+The extension does not enforce this layout. It reads any `.md` file in the folder or its subfolders, without
+following symbolic links, so a page has to be a real file inside the folder. The layout is there so that a reader, or
+an agent, can find the page for a file without searching.
 
 ### Page format
 
@@ -318,7 +321,9 @@ skill in `agent/skill/SKILL.md` spells this out for the agent, with a before and
 The index is built from the pages when the window opens and kept in memory as a map from name to page, without the
 entry text. Each time you hover over a name the extension checks every page's modification time and size and re-reads
 only the pages that changed, so an edit shows up the next time. Measured on 500 pages with 50,000 entries, a lookup
-takes about 5 ms once the index exists, and the index itself is under 6 MB. The extension writes nothing to disk.
+takes about 5 ms once the index exists, and the index itself is under 6 MB. The only files the extension writes are
+the pages, and only to put a `#L` number right. Watching for file changes costs one lookup in that index per changed
+file, about 20 µs, and the check at launch and on focus is one `stat` per linked source file.
 
 ---
 
@@ -367,7 +372,7 @@ The installer scripts have their own tests, run against temporary repositories o
 Tests workflow on GitHub. Their welcome and success screens draw `docs/assets/logo.png` as terminal pixel art;
 `python3 setup/make-logo.py` (Pillow and numpy) regenerates that data inside the three scripts after a logo change.
 
-The repository documents its own two source files under `docs/whatdoesthisdo/references/`, so the hover works in this
+The repository documents its own three source files under `docs/whatdoesthisdo/references/`, so the hover works in this
 checkout too.
 
 ---
