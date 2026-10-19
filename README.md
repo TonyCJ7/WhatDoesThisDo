@@ -15,13 +15,13 @@
     <img src="https://img.shields.io/badge/VS%20Marketplace-WhatDoesThisDo-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VS Marketplace">
   </a>
   <a href="https://open-vsx.org/extension/TonyCJ7/whatdoesthisdo">
-    <img src="https://img.shields.io/open-vsx/v/TonyCJ7/whatdoesthisdo?style=for-the-badge&label=Open%20VSX" alt="Open VSX">
+    <img src="https://img.shields.io/open-vsx/v/TonyCJ7/whatdoesthisdo?style=for-the-badge&label=Open%20VSX&cacheSeconds=300" alt="Open VSX">
   </a>
   <a href="https://github.com/TonyCJ7/WhatDoesThisDo/actions/workflows/tests.yml">
-    <img src="https://img.shields.io/github/actions/workflow/status/TonyCJ7/WhatDoesThisDo/tests.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Tests" alt="Tests">
+    <img src="https://img.shields.io/github/actions/workflow/status/TonyCJ7/WhatDoesThisDo/tests.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Tests&cacheSeconds=300" alt="Tests">
   </a>
   <a href="https://github.com/TonyCJ7/WhatDoesThisDo">
-    <img src="https://img.shields.io/github/stars/TonyCJ7/WhatDoesThisDo?style=for-the-badge&logo=github" alt="GitHub Stars">
+    <img src="https://img.shields.io/github/stars/TonyCJ7/WhatDoesThisDo?style=for-the-badge&logo=github&cacheSeconds=300" alt="GitHub Stars">
   </a>
   <a href="https://github.com/TonyCJ7/WhatDoesThisDo/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License MIT">
@@ -37,6 +37,7 @@
 - [How it works](#-how-it-works)
 - [Getting started](#-getting-started)
 - [Let your AI agent write the documentation](#-let-your-ai-agent-write-the-documentation)
+- [Documenting the code you already have](#-documenting-the-code-you-already-have)
 - [Writing documentation by hand](#-writing-documentation-by-hand)
 - [Settings](#-settings)
 - [Performance](#-performance)
@@ -176,6 +177,25 @@ hand end up in the same places.
 Running the setup again replaces the marked block rather than adding a second one. For scripts and CI, the installers
 take `--agent`, `--scope`, `--folder` and `--yes` (`-Agent`, `-Scope`, `-Folder`, `-Yes` on Windows) and skip the
 screens.
+
+---
+
+## 📚 Documenting the code you already have
+
+The extension does not write descriptions for existing code. It shows whatever is on the pages, and the agent setup
+covers code the agent changes from now on. A function nobody has touched since the setup has no entry until someone
+writes one.
+
+The agent can catch up on old code when you ask it to. After the setup it knows where the pages go and what an entry
+looks like:
+
+```
+Document every function and constant in src/figma/ following the whatdoesthisdo skill.
+```
+
+It writes one page per source file, in the place the tooltip reads from. On a large codebase ask for one folder at a
+time, so the agent reads every file and the pull request stays small enough to review. Treat the entries it writes for
+old code like any other code review. It is describing functions it did not write.
 
 ---
 
