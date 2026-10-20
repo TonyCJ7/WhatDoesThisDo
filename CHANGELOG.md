@@ -9,6 +9,9 @@
   or a `git pull`, when the window opens and when it regains focus. Setting `whatDoesThisDo.updateLines` turns that
   off; the command `WhatDoesThisDo: Update line numbers` does it for every page at once.
 - The page walk no longer follows symbolic links, and a linked file above two megabytes is not searched.
+- The installers start by asking whether to install or uninstall. Uninstall shows what an earlier install left in the
+  chosen scope and removes only that; the reference pages and the rest of `CLAUDE.md` stay. `--uninstall --scope`
+  does the same without questions.
 
 ## 0.1.2
 

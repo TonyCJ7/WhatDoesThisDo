@@ -28,7 +28,7 @@
         "whatDoesThisDo.folder": {
           "type": "string",
           "default": "docs/whatdoesthisdo/references",
-          "description": "Folder, relative to each workspace folder, whose markdown pages hold one entry per function or constant. Subfolders are read too."
+          "description": "Folder, relative to each workspace folder, whose markdown pages hold one entry per function, method, class, type or constant. Subfolders are read too."
         },
         "whatDoesThisDo.updateLines": {
           "type": "boolean",

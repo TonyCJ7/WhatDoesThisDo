@@ -11,10 +11,11 @@ AGENT=""
 SCOPE=""
 FOLDER=""
 YES=0
+MODE=""
 
 usage() {
   cat <<USAGE
-Sets up the WhatDoesThisDo documentation skill and rule for Claude Code and Cursor.
+Sets up the WhatDoesThisDo documentation skill and rule for Claude Code and Cursor, or removes them again.
 
 Without options the script asks on screen; arrow keys move, enter selects, b goes back, q quits.
 
@@ -23,6 +24,7 @@ Options:
   --scope project|global       this repository, or every project on this machine
   --folder <path>              references folder relative to the repository root
   --yes                        accept the defaults for anything not given and write without asking
+  --uninstall                  remove what the script installed in the given --scope; the pages stay
 USAGE
 }
 
@@ -32,6 +34,7 @@ while [ $# -gt 0 ]; do
     --scope) SCOPE="$2"; shift 2 ;;
     --folder) FOLDER="$2"; shift 2 ;;
     --yes) YES=1; shift ;;
+    --uninstall) MODE=uninstall; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
   esac
@@ -141,6 +144,7 @@ read_key() {
     31) KEY=1 ;;
     32) KEY=2 ;;
     33) KEY=3 ;;
+    34) KEY=4 ;;
     "") KEY=quit ;;
     *) KEY=other ;;
   esac
@@ -213,8 +217,8 @@ screen_welcome() {
     printf '  This sets up your AI agent to keep the documentation pages in step with the code.\n'
     printf '  It installs a skill that tells Claude Code and Cursor how the pages are named and\n'
     printf '  written, and a rule that makes the agent read an entry before changing code and\n'
-    printf '  update it in the same change.\n\n'
-    printf '  Three short steps. Nothing is written until you confirm on the summary.\n'
+    printf '  update it in the same change. It can also remove both again.\n\n'
+    printf '  A few short steps. Nothing is written or removed until you confirm on the summary.\n'
     printf '  %senter start · q quit%s' "$DIM" "$RESET"
 
     read_key
@@ -270,6 +274,10 @@ choose() {
   done
 }
 
+mode_index() {
+  case "$MODE" in uninstall) echo 2 ;; *) echo 1 ;; esac
+}
+
 agent_index() {
   case "$AGENT" in claude) echo 2 ;; cursor) echo 3 ;; *) echo 1 ;; esac
 }
@@ -278,8 +286,17 @@ scope_index() {
   case "$SCOPE" in global) echo 2 ;; *) echo 1 ;; esac
 }
 
+screen_mode() {
+  choose "step 1" "What do you want to do?" "$(mode_index)" "Install" "Uninstall"
+
+  case "$CHOICE" in
+    1) MODE=install ;;
+    2) MODE=uninstall ;;
+  esac
+}
+
 screen_agent() {
-  choose "step 1 of 3" "Which agent should follow the documentation rule?" "$(agent_index)" \
+  choose "step 2 of 4" "Which agent should follow the documentation rule?" "$(agent_index)" \
     "Both Claude Code and Cursor" "Claude Code" "Cursor"
 
   case "$CHOICE" in
@@ -296,11 +313,13 @@ screen_scope() {
     project_option="This project only          (not inside a git repository)"
   fi
 
+  step="step 3 of 4"; question="Where should this apply?"
+  [ "$MODE" != uninstall ] || { step="step 2 of 2"; question="Where should it be removed from?"; }
+
   while :; do
     global_option="Everywhere for me          ~/.claude on this machine"
-    [ "$AGENT" = claude ] || global_option="Everywhere for me          ~/.claude, $CURSOR_NOTE"
-    choose "step 2 of 3" "Where should this apply?" "$(scope_index)" \
-      "$project_option" "$global_option"
+    [ "$MODE" = uninstall ] || [ "$AGENT" = claude ] || global_option="Everywhere for me          ~/.claude, $CURSOR_NOTE"
+    choose "$step" "$question" "$(scope_index)" "$project_option" "$global_option"
 
     case "$CHOICE" in
       1) [ -n "$ROOT" ] || continue; SCOPE=project; return ;;
@@ -314,7 +333,7 @@ screen_folder() {
   [ -n "$FOLDER" ] || FOLDER=$DEFAULT_FOLDER
 
   while :; do
-    choose "step 3 of 3" "Where do the reference pages live, relative to the repository root?" 1 \
+    choose "step 4 of 4" "Where do the reference pages live, relative to the repository root?" 1 \
       "Keep  $FOLDER" "Type another folder"
 
     case "$CHOICE" in
@@ -336,7 +355,66 @@ agent_label() {
 
 scope_label() {
   if [ "$SCOPE" != global ]; then echo "This project  ($ROOT)"; return; fi
-  if [ "$AGENT" = claude ]; then echo "Everywhere for me  (~/.claude)"; else echo "Everywhere for me  (~/.claude, $CURSOR_NOTE)"; fi
+  if [ "$MODE" = uninstall ] || [ "$AGENT" = claude ]; then echo "Everywhere for me  (~/.claude)"; else echo "Everywhere for me  (~/.claude, $CURSOR_NOTE)"; fi
+}
+
+summary_screen() {
+  if [ "$MODE" = uninstall ]; then echo 3; else echo 5; fi
+}
+
+quit_nothing() {
+  clear_screen
+
+  if [ "$MODE" = uninstall ]; then echo "nothing removed"; else echo "nothing written"; fi
+
+  exit 0
+}
+
+screen_install_summary() {
+  while :; do
+    clear_screen
+    header "summary"
+    printf '  %s1%s  Action   Install\n' "$DIM" "$RESET"
+    printf '  %s2%s  Agent    %s\n' "$DIM" "$RESET" "$(agent_label)"
+    printf '  %s3%s  Scope    %s\n' "$DIM" "$RESET" "$(scope_label)"
+    printf '  %s4%s  Folder   %s\n\n' "$DIM" "$RESET" "$FOLDER"
+    printf '%sFiles to write:%s\n%s\n\n' "$BOLD" "$RESET" "$(plan_lines)"
+    printf '%senter write · 1 2 3 4 change a step · q quit%s\n' "$DIM" "$RESET"
+
+    read_key
+
+    case "$KEY" in
+      enter) CHOICE=done; return ;;
+      1|2|3|4) CHOICE=$KEY; return ;;
+      quit) CHOICE=quit; return ;;
+    esac
+  done
+}
+
+screen_uninstall_summary() {
+  while :; do
+    clear_screen
+    header "summary"
+    printf '  %s1%s  Action   Uninstall\n' "$DIM" "$RESET"
+    printf '  %s2%s  Scope    %s\n\n' "$DIM" "$RESET" "$(scope_label)"
+    found=$(found_lines)
+
+    if [ -n "$found" ]; then
+      printf '%sFiles to remove:%s\n%s\n\n' "$BOLD" "$RESET" "$found"
+      printf '%senter remove · 1 2 change a step · q quit%s\n' "$DIM" "$RESET"
+    else
+      printf '  Nothing from WhatDoesThisDo found in this scope.\n\n'
+      printf '%s1 2 change a step · q quit%s\n' "$DIM" "$RESET"
+    fi
+
+    read_key
+
+    case "$KEY" in
+      enter) [ -n "$found" ] || continue; CHOICE=done; return ;;
+      1|2) CHOICE=$KEY; return ;;
+      quit) CHOICE=quit; return ;;
+    esac
+  done
 }
 
 interactive() {
@@ -352,38 +430,35 @@ interactive() {
   from_summary=0
 
   while :; do
+    if [ "$screen" = "$(summary_screen)" ]; then
+      if [ "$MODE" = uninstall ]; then screen_uninstall_summary; else screen_install_summary; fi
+
+      case "$CHOICE" in
+        done) clear_screen; INTERACTIVE_DONE=1; return ;;
+        quit) quit_nothing ;;
+        *) screen=$CHOICE; from_summary=1 ;;
+      esac
+
+      continue
+    fi
+
+    mode_before=$MODE
+
     case "$screen" in
-      1) screen_agent ;;
-      2) screen_scope ;;
-      3) screen_folder ;;
-      4)
-        clear_screen
-        header "summary"
-        printf '  %s1%s  Agent    %s\n' "$DIM" "$RESET" "$(agent_label)"
-        printf '  %s2%s  Scope    %s\n' "$DIM" "$RESET" "$(scope_label)"
-        printf '  %s3%s  Folder   %s\n\n' "$DIM" "$RESET" "$FOLDER"
-        printf '%sFiles to write:%s\n%s\n\n' "$BOLD" "$RESET" "$(plan_lines)"
-        printf '%senter write · 1 2 3 change a step · q quit%s\n' "$DIM" "$RESET"
-
-        read_key
-
-        case "$KEY" in
-          enter) clear_screen; INTERACTIVE_DONE=1; return ;;
-          1) screen=1; from_summary=1; continue ;;
-          2) screen=2; from_summary=1; continue ;;
-          3) screen=3; from_summary=1; continue ;;
-          quit) CHOICE=quit ;;
-          *) continue ;;
-        esac
-        ;;
+      1) screen_mode ;;
+      2) if [ "$MODE" = uninstall ]; then screen_scope; else screen_agent; fi ;;
+      3) screen_scope ;;
+      4) screen_folder ;;
     esac
 
+    [ "$MODE" = "$mode_before" ] || from_summary=0
+
     case "$CHOICE" in
-      quit) clear_screen; echo "nothing written"; exit 0 ;;
+      quit) quit_nothing ;;
       back) [ "$screen" -gt 1 ] && screen=$((screen - 1)) ;;
       *)
         if [ "$from_summary" = 1 ]; then
-          screen=4; from_summary=0
+          screen=$(summary_screen); from_summary=0
         else
           screen=$((screen + 1))
         fi
@@ -394,9 +469,20 @@ interactive() {
 
 # ---------- plan and write ----------
 
+scope_base() {
+  if [ "$SCOPE" = project ]; then echo "$ROOT"; else echo "$HOME"; fi
+}
+
+claude_md_path() {
+  if [ "$SCOPE" = project ]; then echo "$ROOT/CLAUDE.md"; else echo "$HOME/.claude/CLAUDE.md"; fi
+}
+
+cursor_rule_path() {
+  echo "$ROOT/.cursor/rules/whatdoesthisdo.mdc"
+}
+
 plan_lines() {
-  base=$HOME
-  [ "$SCOPE" = project ] && base=$ROOT
+  base=$(scope_base)
   printf '  %s/.claude/skills/whatdoesthisdo/SKILL.md\n' "$base"
 
   if [ "$AGENT" != cursor ]; then
@@ -443,28 +529,22 @@ write_block() {
 }
 
 write_files() {
-  base=$HOME
-  [ "$SCOPE" = project ] && base=$ROOT
-  skill="$base/.claude/skills/whatdoesthisdo/SKILL.md"
-  mkdir -p "$(dirname "$skill")"
-  substitute "$SRC/skill/SKILL.md" > "$skill"
+  skill_dir="$(scope_base)/.claude/skills/whatdoesthisdo"
+  mkdir -p "$skill_dir"
+  substitute "$SRC/skill/SKILL.md" > "$skill_dir/SKILL.md"
 
   if [ "$AGENT" != cursor ]; then
-    if [ "$SCOPE" = project ]; then
-      write_block "$ROOT/CLAUDE.md"
-    else
-      write_block "$HOME/.claude/CLAUDE.md"
-    fi
+    write_block "$(claude_md_path)"
   fi
 
   if [ "$AGENT" != claude ] && [ "$SCOPE" = project ]; then
     mkdir -p "$ROOT/.cursor/rules"
-    substitute "$SRC/cursor-rule.mdc" > "$ROOT/.cursor/rules/whatdoesthisdo.mdc"
+    substitute "$SRC/cursor-rule.mdc" > "$(cursor_rule_path)"
   fi
 
   if [ "$SCOPE" = project ] && [ ! -f "$ROOT/$FOLDER/README.md" ]; then
     mkdir -p "$ROOT/$FOLDER"
-    printf '# Reference pages\n\nMarkdown pages read by the WhatDoesThisDo extension. One page per source file, at the same path as the file with a `.md` extension,\none entry per function or constant. The `whatdoesthisdo` skill describes the format.\n' > "$ROOT/$FOLDER/README.md"
+    printf '# Reference pages\n\nMarkdown pages read by the WhatDoesThisDo extension. One page per source file, at the same path as the file with a `.md` extension,\none entry per function, method, class, type or constant. The `whatdoesthisdo` skill describes the format.\n' > "$ROOT/$FOLDER/README.md"
   fi
 
   [ "${INTERACTIVE_DONE:-0}" = 1 ] && return 0
@@ -476,13 +556,69 @@ write_files() {
   fi
 }
 
+# ---------- uninstall ----------
+
+has_block() {
+  grep -q 'whatdoesthisdo:start' "$1" 2>/dev/null
+}
+
+# Everything the scope holds from a previous install, at the paths the install writes to.
+found_lines() {
+  skill_dir="$(scope_base)/.claude/skills/whatdoesthisdo"
+  claude_md=$(claude_md_path)
+  [ -d "$skill_dir" ] && printf '  %s/\n' "$skill_dir"
+  has_block "$claude_md" && printf '  %s  (rule block between <!-- whatdoesthisdo --> markers)\n' "$claude_md"
+  [ "$SCOPE" = project ] && [ -f "$(cursor_rule_path)" ] && printf '  %s\n' "$(cursor_rule_path)"
+  return 0
+}
+
+remove_files() {
+  skill_dir="$(scope_base)/.claude/skills/whatdoesthisdo"
+  claude_md=$(claude_md_path)
+
+  if has_block "$claude_md"; then
+    kept=$(strip_block "$claude_md")
+
+    if [ -n "$kept" ]; then
+      printf '%s\n' "$kept" > "$claude_md"
+    else
+      rm -f "$claude_md"
+    fi
+  fi
+
+  if [ "$SCOPE" = project ]; then
+    rm -f "$(cursor_rule_path)"
+    rmdir "$ROOT/.cursor/rules" "$ROOT/.cursor" 2>/dev/null || true
+  fi
+
+  rm -rf "$skill_dir"
+  [ "$SCOPE" != project ] || rmdir "$ROOT/.claude/skills" "$ROOT/.claude" 2>/dev/null || true
+  [ "${INTERACTIVE_DONE:-0}" = 1 ] && return 0
+  printf '%sDone.%s Removed:\n%s\n' "$GREEN" "$RESET" "$REMOVED"
+  cursor_unpaste_note
+}
+
+cursor_unpaste_note() {
+  [ "$SCOPE" = global ] || return 0
+  printf '\n%sIf you pasted the Cursor rule into Cursor Settings > Rules > User Rules, remove it there.%s\n' "$YELLOW" "$RESET"
+}
+
+show_removed() {
+  logo
+  printf '\n  %s✔ Uninstalled.%s Removed:\n%s\n\n' "$GREEN" "$RESET" "$REMOVED"
+  printf '  %sNext:%s reload your editor so the skill and rule are forgotten.\n' "$BOLD" "$RESET"
+  printf '    VS Code and Cursor: Command Palette, "Developer: Reload Window"\n'
+  printf '    Claude Code: start a new session\n'
+  cursor_unpaste_note
+}
+
 spin_while_writing() {
   frames='|/-\\'
   i=0
 
   while kill -0 "$1" 2>/dev/null || [ "$i" -lt 4 ]; do
     frame=$(printf '%s' "$frames" | cut -c$(( i % 4 + 1 )))
-    printf '\r  %s%s%s Writing files…' "$CYAN" "$frame" "$RESET"
+    printf '\r  %s%s%s %s' "$CYAN" "$frame" "$RESET" "${2:-Writing files…}"
     i=$((i + 1))
     sleep 0.1
   done
@@ -500,12 +636,43 @@ show_success() {
 
 # ---------- main ----------
 
-if [ "$YES" = 1 ]; then
+if [ "$MODE" = uninstall ]; then
+  [ -n "$SCOPE" ] || interactive
+elif [ "$YES" = 1 ]; then
   [ -n "$AGENT" ] || AGENT=both
   [ -n "$SCOPE" ] || SCOPE=project
   [ -n "$FOLDER" ] || FOLDER=$DEFAULT_FOLDER
 elif [ -z "$AGENT" ] || [ -z "$SCOPE" ] || [ -z "$FOLDER" ]; then
   interactive
+fi
+
+if [ "$MODE" = uninstall ]; then
+  case "$SCOPE" in project|global) ;; *) echo "scope must be project or global" >&2; exit 2 ;; esac
+
+  if [ "$SCOPE" = project ] && [ -z "$ROOT" ]; then
+    echo "not inside a git repository; run from your project or use --scope global" >&2
+    exit 1
+  fi
+
+  REMOVED=$(found_lines)
+
+  if [ -z "$REMOVED" ]; then
+    echo "Nothing from WhatDoesThisDo found in $(scope_label)."
+    exit 0
+  fi
+
+  if [ "${INTERACTIVE_DONE:-0}" = 1 ]; then
+    remove_log="$TMP/remove.log"
+    (remove_files > "$remove_log" 2>&1) &
+    spin_while_writing $! "Removing files…"
+    wait $! || { cat "$remove_log"; exit 1; }
+    clear_screen
+    show_removed
+  else
+    remove_files
+  fi
+
+  exit 0
 fi
 
 case "$AGENT" in claude|cursor|both) ;; *) echo "agent must be claude, cursor or both" >&2; exit 2 ;; esac

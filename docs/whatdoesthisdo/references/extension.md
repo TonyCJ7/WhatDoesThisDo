@@ -2,220 +2,322 @@
 
 ### [referencesDir(folder)](../../../extension.js#L20)
 
-Where the pages live for one workspace folder: the `whatDoesThisDo.folder` setting joined onto the folder's path.
-The setting is read with that folder's own configuration, so each root of a multi-root workspace can point
-somewhere else. Default `docs/whatdoesthisdo/references`.
+Finds the folder that holds the pages for one folder open in the editor.
+
+- In: `folder`, a folder open in the editor, the one that contains the hovered file.
+- Out: the absolute path of its pages folder. That is the `whatDoesThisDo.folder` setting, by default
+  `docs/whatdoesthisdo/references`, joined onto the open folder's path.
 
 ### [fileOf(link)](../../../extension.js#L26)
 
-The part of a page link before `#`, which is the file it points at.
+Strips the line part from a page link.
+
+- In: `link`, the link text of an entry as written on the page, `../../src/a.ts#L12`.
+- Out: the part before `#`, `../../src/a.ts`, the path of the source file the link points at, relative to the page.
 
 ### [linkFile(entry)](../../../extension.js#L30)
 
-The absolute path of the source file an entry's link points at, resolved from the page's folder. This is the path
-the definition match compares against and the key the save listener looks pages up by.
+Resolves the source file that an entry documents to an absolute path. The link on the page is relative to the page,
+so it is joined onto the page's folder.
+
+- In: `entry`, an entry read from a page, with the field `pageDir` that holds the page's folder.
+- Out: the absolute path of the source file. Every comparison with a path the editor reports uses this form.
 
 ### [entriesIn(markdown, page)](../../../extension.js#L34)
 
-The entries of one page's text, each tagged with `page`, the page's absolute path, and `pageDir`, its folder, because
-the links on a page are relative to the page. Takes the text rather than reading the file so the save listener can
-parse an editor buffer that has unsaved changes.
+Parses the text of one page into entries, and tags each entry with where it came from.
+
+- In: `markdown`, the page text, read from disk or taken from an open editor document. `page`, the absolute path of
+  that page.
+- Out: the entries, each with two extra fields: `page`, the page's absolute path, and `pageDir`, the page's folder.
+  The hover uses the folder to resolve the entry's links and the path to build its `Open in` link.
 
 ### [pageEntries(page)](../../../extension.js#L40)
 
-`entriesIn` for the page as it is on disk.
+Reads one page from disk and parses it into entries.
+
+- In: `page`, the absolute path of the page to read.
+- Out: its entries, each tagged with the page's path and folder.
 
 ### [indexPage(page)](../../../extension.js#L44)
 
-What the index keeps per page: the set of entry names and the set of source files the entries link to. The text is
-thrown away, which is why 500 pages with 50,000 entries stay under 6 MB in memory.
+Summarises one page for the index, the in-memory summary of every page that lets a hover find the right page
+without reading all of them.
+
+- In: `page`, the absolute path of the page to summarise.
+- Out: an object with two sets. `names` holds every entry name on the page. `files` holds the absolute path of every
+  source file the entries link to. The entry text is not kept, so the index stays small.
 
 ### [markdownFilesIn(dir, prefix)](../../../extension.js#L53)
 
-Every `.md` file under `dir`, as paths relative to it, walking subfolders itself and skipping symbolic links, files
-and folders alike. The editor's own Node follows a linked folder in a recursive listing, which would let a
-repository point the walk at the user's home or disk; this walk never leaves the folder.
+Lists every markdown page under a folder, subfolders included. Walks the folders itself, because Node's own
+recursive listing follows symbolic links inside the editor, and a link could pull in pages from anywhere on the
+disk. A symbolic link is skipped, whether it points at a file or a folder.
+
+- In: `dir`, the absolute path of the folder to walk. `prefix`, the path of the subfolder being walked, relative to
+  the folder of the first call. The first call leaves it empty; only the recursion sets it.
+- Out: the paths of the `.md` files, relative to the folder of the first call.
 
 ### [isRealFolder(dir)](../../../extension.js#L73)
 
-Whether `dir` is a directory in its own right: false when it is missing, a file, or a symbolic link, which `lstat`
-reports as a link rather than following it. The references folder is only walked when this holds, so a repository
-cannot commit the folder itself as a link to the user's home.
+Checks that a path is a directory in its own right, so that a pages folder which is itself a symbolic link is
+ignored and never pulls pages in from elsewhere.
+
+- In: `dir`, the absolute path to check.
+- Out: true for a directory. False when the path is missing, is a file or is a symbolic link.
 
 ### [refreshPages(dir)](../../../extension.js#L81)
 
-The index for one references folder: a map from page path to `{ mtimeMs, size, names, files }`.
+Builds or refreshes the index of one pages folder, the in-memory summary of every page, and keeps it for the next
+call. A page whose modification time and size are unchanged keeps its old summary; every other page is read again.
+On a folder with two thousand pages the check takes a few milliseconds, since it is one file stat per page.
 
-- Walks the folder and its subfolders, keeps the cached sets for every page whose modification time and size are
-  unchanged, and parses only the rest.
-- Runs before every hover, after every change that reaches `onFileChanged`, and in `staleFiles`. For an unchanged page that is one `stat`, which is how an edit shows
-  up on the next hover without a file watcher.
-- Out: an empty map when the folder does not exist or is itself a symbolic link, so a project without pages
-  hovers nothing.
+- In: `dir`, the absolute path of the pages folder.
+- Out: a map from page path, relative to the pages folder, to its modification time, size, entry names and the
+  source files it links to. An empty map when the path is not a real folder.
 
 ### [entriesNamed(dir, word)](../../../extension.js#L104)
 
-Every entry called `word`, read from the pages whose index says they hold that name, usually one.
+Collects every entry with one name from the pages of a folder. Only the pages whose index summary lists that name
+are read, which is usually one page.
+
+- In: `dir`, the absolute path of the pages folder to search. `word`, the word under the cursor, as the editor's
+  word rules for the language give it.
+- Out: the entries whose name is that word. An empty list when no page has it.
 
 ### [pagesLinking(pages, dir, file)](../../../extension.js#L118)
 
-The absolute paths of the pages in the index `pages` with at least one entry linking to `file`. This is how a
-changed source file finds its pages, so a page does not have to sit at the mirrored path to be kept current. Takes
-the index as an argument so a burst of changes refreshes it once.
+Finds the pages whose entries document one source file. This is how a change to one source file leads to the one
+or two pages that need their line numbers rewritten.
+
+- In: `pages`, the index of the pages folder, a map from page path to its summary. `dir`, the absolute path of that
+  folder, needed to turn the relative page paths in the index into absolute ones. `file`, the absolute path of the
+  source file that changed.
+- Out: the absolute paths of the pages that link to the source file.
 
 ### [definitionLocations(document, position)](../../../extension.js#L122)
 
-Where the language server says the symbol at `position` is declared, as `{ file, line }` with the line 1-based.
-Every location, not only the first: a TypeScript interface merged across two files reports both, and the entry may
-point at the second. Empty when no server answers, which is the case for Python or Rust without their extensions
-installed.
+Asks the editor's language support where the word under the cursor is defined.
+
+- In: `document`, the file being hovered, as the editor holds it. `position`, the cursor position in it.
+- Out: a list with one item per place the editor reports, each the absolute path of a source file and a 1-based
+  line. An empty list when the editor has no language support for the file, or when it does not know the word.
+  Both are normal, so an empty answer never fails the hover.
 
 ### [searchLine(file, name)](../../../extension.js#L131)
 
-`declarationLine` from `lines.js` over the contents of `file`, or null when the file cannot be read or is larger
-than `MAX_SEARCH_BYTES`, which no source file is.
+Finds the line where a name is declared by reading the source file and scoring every line that holds the name,
+with the declaration keywords and punctuation of common languages. This is the fallback when the editor's language
+support has no answer.
+
+- In: `file`, the absolute path of the source file an entry documents. `name`, the entry's name, the declaration to
+  find in that file.
+- Out: the 1-based line number. Null when the file cannot be read, when it is larger than two megabytes, or when no
+  line holds the name.
 
 ### [lineInLink(link)](../../../extension.js#L143)
 
-The number after `#L` at the end of a page link, or null when the link has none.
+Reads the line number written at the end of a page link.
+
+- In: `link`, the link text of an entry as written on the page.
+- Out: the number after `#L`. Null when the link has no line.
 
 ### [hoverLine(entry, definitions)](../../../extension.js#L149)
 
-The line the hover's heading should open: the language server's line when one of its `definitions` is in the
-entry's file, otherwise `searchLine`, otherwise whatever the page wrote. A stale line on the page therefore never
-reaches the hover.
+Picks the line that a hover heading opens. Tries three sources in order and takes the first that answers.
+
+- In: `entry`, the entry behind the heading, which names the source file and may carry a `#L` line. `definitions`,
+  the places where the editor says the hovered word is defined, a source file and a line each.
+- Out: the editor's line, when one of its places is in the entry's source file. Otherwise the line found by reading
+  that file. Otherwise the `#L` written on the page. Null when all three fail, and the heading then opens the top of
+  the source file.
 
 ### [fileLink(file, line)](../../../extension.js#L156)
 
-An absolute `file:` URI string for `file` with `L<line>` as its fragment, or no fragment when the line is null.
+Builds the link behind a hover heading, the one that jumps from the hover to the code.
+
+- In: `file`, the absolute path of the source file to open. `line`, a line number in that file, or null.
+- Out: the path as a `file://` address. With a line number it ends in `#L<line>`, so the editor opens that line.
+  With null there is no line part, and the editor opens the top of the source file.
 
 ### [rankEntries(candidates, definitions, document)](../../../extension.js#L160)
 
-Which entries to show when several share a name, and in which order.
+Decides which entries the hover shows when more than one page has an entry with the hovered name, and in which
+order.
 
+- In: `candidates`, every entry whose name is the hovered word, from one page or several. `definitions`, the places
+  where the editor says that word is defined, a source file and a line each; the list is empty when the editor has
+  no language support for the file. `document`, the file being hovered.
+- Out: the entries to show, in that order.
 - One candidate is returned as it is.
-- Otherwise the entries whose link file is one of the definition files win, and only those are shown.
-- When none match, which is the case without a server or when a page links to the wrong file, every candidate is
-  shown, the ones whose link file has the hovered document's extension first. A Python `save` sees the Python page
-  before the TypeScript one.
+- When the editor named the file where the word is defined, only the candidates that document that file are
+  returned. Two functions called `save` in different files each show their own entry.
+- When the editor named no file, every candidate is returned. Those that document a file with the same extension as
+  the hovered file come first, since a `save` hovered in a `.py` file is most likely the Python one.
 
 ### [absoluteLinks(text, pageDir)](../../../extension.js#L179)
 
-The entry text with every relative markdown link turned into an absolute `file:` link, resolved against the page's
-folder, with the `#L` part kept as the URI fragment. Links that already have a scheme are left alone.
+Rewrites every relative link in a hover text into an absolute `file://` address. The editor treats the `#L…` part
+of a relative link as part of the file name, which breaks the jump to the line, so the hover cannot use the links
+as written on the page.
 
-- Why: the editor joins a relative link's text onto the base path, fragment included, so `../x.js#L72` opened an
-  empty editor called `x.js#L72`. With a real fragment the click opens `x.js` at line 72.
+- In: `text`, the markdown of the hover. `pageDir`, the absolute path of the page's folder, which the links on the
+  page are relative to.
+- Out: the same text with every relative link turned into a `file://` address with its `#L<line>` kept. A link that
+  already starts with a scheme, such as `https:`, is left as it is.
 
 ### [markdownFor(entry, definitions)](../../../extension.js#L192)
 
-The hover block for one entry as a MarkdownString: the heading with its link pointed at `hoverLine`, then a
-line `Open in <page>.md` linking to the page at the entry's own heading line, then the rest of the entry text, all
-links made absolute. Nothing else is set on the string, so an entry cannot run commands.
+Builds the text of one hover block.
+
+- In: `entry`, the entry to show. `definitions`, the places where the editor says the hovered word is defined,
+  used to pick the line the heading opens.
+- Out: the markdown the editor renders in the hover, in three parts: the heading, with its link pointed at the
+  line the declaration is on now; a line with `Open in <page>.md`, linking to the entry on its page; and the entry
+  text. The text is marked untrusted, so it cannot run editor commands.
 
 ### [provideHover(document, position)](../../../extension.js#L205)
 
-The hover provider. Asks the language server once, ranks the candidates with its answer, and returns one Hover with
-one markdown block per entry, which the editor shows under its own tooltip.
+Answers the editor's hover request. Collects the entries named like the word under the cursor, asks the editor's
+language support once where the word is defined, picks and orders the entries and builds one block per entry.
 
-- Null, which leaves the editor's tooltip untouched, when the document is outside a workspace folder, when there is
-  no word at the position by the language's own word pattern, or when no page names the word.
+- In: `document`, the file being hovered, as the editor holds it. `position`, the cursor position in it.
+- Out: one hover with the blocks. Null when the file is outside every folder open in the editor, when there is no
+  word under the cursor, or when no page has the word, so other hover providers are not disturbed.
 
 ### [symbolLines(file)](../../../extension.js#L226)
 
-A map from symbol name to 1-based line for every symbol the language server reports in `file`, nested ones
-included, first occurrence winning. A signature the server puts in the name, as Java's `save(int)`, is cut off so
-the entry name matches. Empty when no server answers or the provider throws, so the text search still runs.
+Asks the editor's language support for every named thing in one source file, nested ones included, and where each
+is declared.
+
+- In: `file`, the absolute path of the source file that changed, whose declarations may have moved.
+- Out: a map from name to its 1-based line. A parameter list that some language supports append to the name,
+  `save(id)`, is stripped so the name matches the page. When two things share a name, the first keeps the line. An
+  empty map when the editor has no language support for the file or it fails.
 
 ### [relinkedLine(text, entries, lineFor)](../../../extension.js#L252)
 
-One page line with each entry link's `#L` number replaced by what `lineFor` returns for that link's entries. A link
-whose entries all resolve to nothing is left as it is, so a wrong guess never overwrites a correct line.
+Rewrites the `#L` number in each link on one line of a page.
+
+- In: `text`, one line of the page, a heading or a constant bullet. `entries`, the entries that opened on that line,
+  so each link can be matched to its entry. `lineFor`, a function that gives the new line number for an entry, or
+  nothing when it has none.
+- Out: the page line with each link's number replaced. A link whose entry gets no number is left as it is,
+  including a link that had no number.
 
 ### [rewriteLines(page, file, lineFor)](../../../extension.js#L260)
 
-Rewrites the links to `file` on one page and returns how many lines changed. Works on the editor's document, so an
-open page updates in its buffer; the page is saved afterwards only when it had no unsaved changes before.
+Updates the links to one source file on one page. Opens the page the way the editor does, so an editor with the
+page open sees the change, and edits only the lines whose links change. Saves the page afterwards unless it already
+had unsaved changes.
+
+- In: `page`, the absolute path of the page to edit. `file`, the absolute path of the source file whose links to
+  update; links to other files on the same page are left alone. `lineFor`, a function that gives the new line
+  number for an entry.
+- Out: how many page lines changed.
 
 ### [updateLinesFor(dir, file, index)](../../../extension.js#L291)
 
-Updates every page in `dir` that links to `file`: the language server's symbols first, `searchLine` for the names it
-does not know. Returns the number of changed lines. `index` is the refreshed page index; a caller handling many
-files passes one it refreshed itself, a single call lets the default refresh it.
+Brings every page that documents one source file up to date with the file's current lines. Takes each entry's line
+from the editor's language support first, and by reading the file for the names the editor did not report.
+
+- In: `dir`, the absolute path of the pages folder. `file`, the absolute path of the source file that changed.
+  `index`, the in-memory summary of the pages folder, passed in when one refresh serves a whole burst of changes,
+  and built fresh when left out.
+- Out: how many page lines changed across the pages. Zero when no page documents the source file.
 
 ### [updatesEnabled(folder)](../../../extension.js#L309)
 
-The `whatDoesThisDo.updateLines` setting for one workspace folder, which turns every automatic rewrite off at once.
+Reads the `whatDoesThisDo.updateLines` setting for one folder open in the editor.
+
+- In: `folder`, a folder open in the editor.
+- Out: true when the automatic line number rewrites are on for it, which is the default.
 
 ### [isPage(dir, file)](../../../extension.js#L313)
 
-Whether `file` lies inside the references folder `dir`. A page is never a source file to rewrite for, which is also
-what stops the page save the rewrite causes from looping.
+Checks whether a changed file is itself a page. A page is never treated as a source file, which also stops a page
+save from starting another rewrite.
+
+- In: `dir`, the absolute path of the pages folder. `file`, the absolute path of the changed file.
+- Out: true when the changed file lies inside the pages folder.
 
 ### [enqueue(task)](../../../extension.js#L317)
 
-Runs `task` after every rewrite already queued, so a burst of changes, a focus sync and the command never rewrite
-the same page at the same time. A task that throws is dropped; the next change, focus or command catches up.
+Runs one rewrite task after every rewrite already waiting. All rewrites go through this one queue, so a burst of
+changes, a catch-up on focus and the command never rewrite the same page at the same time.
+
+- In: `task`, the rewrite to run, a function that finishes later: the flush of collected changes, the catch-up on
+  stale pages, or the command that rewrites every page.
+- Out: a promise that settles when the task has run. An error in a task is swallowed, and the next change, focus or
+  command catches up.
 
 ### [flushChanges()](../../../extension.js#L325)
 
-Handles every file collected since the last flush: one index refresh per references folder, then `updateLinesFor`
-on each file in turn.
+Handles every file collected since the last flush. Refreshes the index once per pages folder, then rewrites the
+pages of each file in turn. Clears the collected set first, so changes that arrive during the flush are kept for the
+next one.
 
 ### [onFileChanged(uri)](../../../extension.js#L339)
 
-What a save in the editor and a change on disk both call. Adds the file to the set for its references folder and
-restarts the `SETTLE_MS` timer, so a save that the watcher also reports, or a checkout that touches a thousand
-files, ends in one queued `flushChanges`. Nothing happens for a file outside a workspace folder, for a page, or when
-the setting is off.
+Takes one changed file from either source, a save in the editor or a change on disk seen by the file watcher. Adds
+the file to the set of changes waiting for its pages folder and restarts the one settle timer. The flush runs 150 ms
+after the last event, so a `git pull` that touches fifty files costs one index refresh.
+
+- In: `uri`, the address of the changed file, as the save listener or the watcher reports it.
+- Refuses: a file outside every folder open in the editor, a file in a folder whose updates are turned off, and a
+  page. Each is ignored.
 
 ### [staleFiles(dir)](../../../extension.js#L362)
 
-The source files linked from pages in `dir` that changed after the page that links to them, as a map from file to
-its modification time. A file whose time was already handled by `syncStalePages` is left out, so a page that needed
-no rewrite is not checked again on every focus. A file that is gone is skipped and its entries stay as they are.
+Finds the source files that changed after the page documenting them, which is what happens while the editor is
+closed.
+
+- In: `dir`, the absolute path of the pages folder whose pages to check.
+- Out: a map from source file path to its modification time. A source file whose time was already handled by an
+  earlier catch-up is skipped, so a file is not handled again on every focus. A source file that no longer exists
+  is skipped too.
 
 ### [syncStalePages()](../../../extension.js#L384)
 
-`updateLinesFor` on every stale file of every workspace folder. Queued at activation and each time the window
-regains focus, which is how a `git pull`, a branch switch or an agent's edit from a terminal reaches the pages
-without a save.
+Catches up on code that changed while the editor was closed or unfocused. Rewrites the pages of every stale source
+file in every folder open in the editor whose updates are on, and remembers each file's time so the same change is
+not handled twice. Runs at activation and each time the window regains focus.
 
 ### [updateAllLines()](../../../extension.js#L399)
 
-The command `WhatDoesThisDo: Update line numbers`: `updateLinesFor` on every source file any page links to, in every
-workspace folder, then a message with the count. For a project whose pages drifted before the extension was
-installed.
+Runs the command `WhatDoesThisDo: Update line numbers`. Rewrites the links to every source file any page documents,
+in every folder open in the editor, whether the file changed or not. A source file that no longer exists is
+skipped. Shows a message with the number of changed lines.
 
 ### [warmIndex()](../../../extension.js#L417)
 
-Builds the index for every workspace folder at activation, so the first hover does not pay the few hundred
-milliseconds a cold index costs on a large project. A folder that cannot be read is skipped and the first hover
-retries it; activation never fails because of it.
+Builds the index for every folder open in the editor at activation, so the first hover does not pay the few hundred
+milliseconds of reading every page. An unreadable folder is ignored, and the first hover reads it again.
 
 ### [activate(context)](../../../extension.js#L427)
 
-Registers the hover provider for every `file:` document in any language, the save listener, a watcher for changes
-on disk, the focus listener and the update command, then warms the index and syncs the pages that went stale while
-the editor was closed. The watcher subscribes to the editor's own file watching with the glob `**/*`, change events
-only, so it starts no process of its own. Runs on `onStartupFinished`, after the window is up, so it never slows the editor's start.
+Starts the extension. Registers the hover provider for every file on disk in any language, the save listener, a
+watcher for changes on disk, the focus listener and the command. Then warms the index and queues one catch-up on
+stale pages.
+
+- In: `context`, the object the editor passes to every extension at activation. Everything registered goes on its
+  `subscriptions`, so it is released when the extension unloads.
 
 ## Constants
 
-- [`MARKDOWN_LINK`](../../../extension.js#L8): the `](href)` tail of a markdown link, href captured, no spaces
-  allowed inside.
-- [`HAS_SCHEME`](../../../extension.js#L9): an href that starts with a URI scheme such as `https:` or `file:`, which
-  `absoluteLinks` leaves as it is.
-- [`LINE_IN_LINK`](../../../extension.js#L10): the `#L<number>` at the end of a page link.
-- [`SIGNATURE`](../../../extension.js#L11): the `(` and everything after it in a symbol name, which some language
-  servers append to a method's name.
-- [`SETTLE_MS`](../../../extension.js#L12): how long `onFileChanged` waits after the last event before flushing,
-  long enough for a save and the watcher's report of it to collapse into one run.
-- [`MAX_SEARCH_BYTES`](../../../extension.js#L13): two megabytes, the largest linked file the line search reads, so a
-  page cannot make a hover read a disk image.
-- [`pagesByFolder`](../../../extension.js#L14): the index cache, references folder path to the map `refreshPages`
-  builds. One entry per workspace folder; it lives as long as the window.
-- [`pendingChanges`](../../../extension.js#L15): the files changed since the last flush, grouped by references folder.
-- [`syncedAt`](../../../extension.js#L16): the modification time of each source file `syncStalePages` last handled.
-- [`settleTimer`](../../../extension.js#L17): the one timer that `onFileChanged` restarts on every event.
-- [`queue`](../../../extension.js#L18): the promise chain every rewrite runs on, one task at a time.
+- [`MARKDOWN_LINK`](../../../extension.js#L8): matches the `](href)` tail of a markdown link and captures the href. An href with a space
+  in it is not a link.
+- [`HAS_SCHEME`](../../../extension.js#L9): matches an href that starts with a scheme such as `https:` or `file:`. Such a link is left
+  as it is.
+- [`LINE_IN_LINK`](../../../extension.js#L10): matches the `#L<number>` at the end of a page link.
+- [`SIGNATURE`](../../../extension.js#L11): matches the `(` and everything after it in a name reported by the editor. Some language
+  supports append the parameters to the name, and the page key has none.
+- [`SETTLE_MS`](../../../extension.js#L12): how long the extension waits after the last file change before rewriting pages, 150 ms.
+  Long enough to gather a `git pull`, short enough that a hover after a save sees the new line.
+- [`MAX_SEARCH_BYTES`](../../../extension.js#L13): two megabytes, the largest source file the line search reads. A generated bundle
+  linked by mistake does not stall a hover.
+- [`pagesByFolder`](../../../extension.js#L14): the index cache, from pages folder path to the summary of its pages.
+- [`pendingChanges`](../../../extension.js#L15): the files changed since the last flush, grouped by pages folder.
+- [`syncedAt`](../../../extension.js#L16): the modification time of each source file the last catch-up handled.
+- [`settleTimer`](../../../extension.js#L17): the one timer that every file change restarts.
+- [`queue`](../../../extension.js#L18): the chain every rewrite runs on, one task at a time.

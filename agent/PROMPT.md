@@ -16,5 +16,9 @@ Set up WhatDoesThisDo documentation for this repository.
    - For Cursor, project scope: `agent/cursor-rule.mdc` to `.cursor/rules/whatdoesthisdo.mdc`. For Cursor, global
      scope: the skill only, and print the rule text for me to paste into Cursor Settings, Rules, User Rules.
 4. Create the references folder, if it does not exist, with a `README.md` saying that it holds one page per source
-   file at the same path with a `.md` extension, one entry per function or constant, in the format the skill describes.
+   file at the same path with a `.md` extension, one entry per function, method, class, type or constant, in the
+   format the skill describes.
 5. Show me every file you created or changed, then stop. Do not commit.
+
+To remove the setup later, ask the agent to delete the skill folder and the Cursor rule file from step 3 and to take
+the marked block out of `CLAUDE.md`, leaving the rest of that file and the references folder as they are.

@@ -139,11 +139,11 @@ cursor --install-extension TonyCJ7.whatdoesthisdo    # Cursor
 
 ### 2. Set up your AI agent
 
-In your own project, run the installer for your operating system. It opens with a welcome screen, then asks three
-questions: which agent to set up, whether for this project or for every project, and where the pages live. Arrow keys
-move, enter selects, `b` goes back and `q` quits. A summary shows your choices and the files it is about to write, and
-you can jump back to any step from there. Once the files are written it reminds you to reload the editor, because
-skills and rules are read when a session starts.
+In your own project, run the installer for your operating system. It opens with a welcome screen, asks whether to
+install or uninstall, then asks three questions: which agent to set up, whether for this project or for every project,
+and where the pages live. Arrow keys move, enter selects, `b` goes back and `q` quits. A summary shows your choices and
+the files it is about to write, and you can jump back to any step from there. Once the files are written it reminds
+you to reload the editor, because skills and rules are read when a session starts.
 
 macOS:
 
@@ -165,6 +165,11 @@ irm https://raw.githubusercontent.com/TonyCJ7/WhatDoesThisDo/main/setup/setup-wi
 
 If you would rather not run a script, paste the contents of [`agent/PROMPT.md`](agent/PROMPT.md) into Claude Code or
 Cursor. The agent asks the same questions and copies the same files.
+
+To undo the setup, run the same installer and choose **Uninstall**, or pass `--uninstall --scope project` or
+`--uninstall --scope global` (`-Uninstall -Scope` on Windows). It looks for what an install leaves behind, the skill
+folder, the marked block in `CLAUDE.md` and the Cursor rule file, shows what it found and removes only that. The rest
+of `CLAUDE.md` and the reference pages stay. A rule pasted into Cursor's User Rules has to be removed there by hand.
 
 ### 3. Try it
 
