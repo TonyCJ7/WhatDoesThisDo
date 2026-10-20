@@ -31,6 +31,8 @@ Press F5 in VS Code or Cursor to run the extension from source in a second windo
 - Keep the README's "How it works", page format and test sections true after the change.
 - No new runtime dependency without an issue first. Dev dependencies are fine when they earn their place.
 - Add a line to `CHANGELOG.md` under the next version.
+- When a file under `agent/` changes, bump the version marker near the top of `agent/skill/SKILL.md` to the next
+  extension version. The extension compares it with installed skills to offer an update.
 
 ## Report a bug
 

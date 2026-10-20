@@ -112,7 +112,7 @@ try {
   # interactive uninstall: down to Uninstall, project scope, confirm on the summary
   NewRepo "$tmp/eight"
   Run "$tmp/eight" @{ Agent = "both"; Scope = "project"; Yes = $true } | Out-Null
-  $env:WDTD_KEYS = "`n$([char]27)[B`n`n`n"
+  $env:WDTD_KEYS = "`n$([char]27)[B$([char]27)[B`n`n`n"
   Push-Location "$tmp/eight"
   try { $out = (& $script) -join "`n" } finally { Pop-Location; Remove-Item Env:WDTD_KEYS }
   if ($out -notmatch "Uninstalled") { Fail "interactive uninstall: no success message" }
@@ -121,7 +121,7 @@ try {
 
   # interactive uninstall with nothing installed: enter does nothing, q leaves
   NewRepo "$tmp/nine"
-  $env:WDTD_KEYS = "`n$([char]27)[B`n`n`nq"
+  $env:WDTD_KEYS = "`n$([char]27)[B$([char]27)[B`n`n`nq"
   Push-Location "$tmp/nine"
   try { $out = (& $script) -join "`n" } finally { Pop-Location; Remove-Item Env:WDTD_KEYS }
   if ($out -notmatch "nothing removed") { Fail "interactive empty uninstall did not say nothing removed" }
@@ -166,7 +166,7 @@ try {
   # interactive: from the install summary, 1 switches to Uninstall, 2 revisits the scope, enter removes
   NewRepo "$tmp/twelve"
   Run "$tmp/twelve" @{ Agent = "both"; Scope = "project"; Yes = $true } | Out-Null
-  $env:WDTD_KEYS = "`n`n`n`n`n1$([char]27)[B`n`n2`n`n"
+  $env:WDTD_KEYS = "`n`n`n`n`n1$([char]27)[B$([char]27)[B`n`n2`n`n"
   Push-Location "$tmp/twelve"
   try { $out = (& $script) -join "`n" } finally { Pop-Location; Remove-Item Env:WDTD_KEYS }
   if ($out -notmatch "Uninstalled") { Fail "mode switch: no uninstall success message" }
@@ -174,7 +174,7 @@ try {
 
   # interactive: q on an uninstall summary that lists files removes nothing
   Run "$tmp/twelve" @{ Agent = "both"; Scope = "project"; Yes = $true } | Out-Null
-  $env:WDTD_KEYS = "`n$([char]27)[B`n`nq"
+  $env:WDTD_KEYS = "`n$([char]27)[B$([char]27)[B`n`nq"
   Push-Location "$tmp/twelve"
   try { $out = (& $script) -join "`n" } finally { Pop-Location; Remove-Item Env:WDTD_KEYS }
   if ($out -notmatch "nothing removed") { Fail "quit on uninstall summary did not say nothing removed" }
@@ -194,6 +194,80 @@ try {
   $failed = $false
   try { Run "$tmp/thirteen" @{ Bogus = $true } *> $null; if ($LASTEXITCODE -ne 0) { $failed = $true } } catch { $failed = $true }
   if (-not $failed) { Fail "unknown parameter did not fail" }
+
+  # update replaces an outdated skill and rule block, keeps the rest of CLAUDE.md, its place, and the custom folder
+  NewRepo "$tmp/fourteen"
+  Set-Content -Path "$tmp/fourteen/CLAUDE.md" -Value "# My rules`n`nKeep them."
+  Run "$tmp/fourteen" @{ Agent = "both"; Scope = "project"; Folder = "docs/refs"; Yes = $true } | Out-Null
+  Add-Content -Path "$tmp/fourteen/.claude/skills/whatdoesthisdo/SKILL.md" -Value "old line"
+  $claude = (Get-Content -Raw "$tmp/fourteen/CLAUDE.md").Replace("read its entry", "read its old entry") + "`nTail rule.`n"
+  [IO.File]::WriteAllText("$tmp/fourteen/CLAUDE.md", $claude)
+  $out = (Run "$tmp/fourteen/src" @{ Update = $true }) -join "`n"
+  if ($out -notmatch "Updated") { Fail "update did not report what it updated" }
+  if ($out -match "whatdoesthisdo.mdc") { Fail "update reported the cursor rule although it was current" }
+  $expected = (Get-Content -Raw "$agentDir/skill/SKILL.md").Replace("docs/whatdoesthisdo/references", "docs/refs")
+  if ((Get-Content -Raw "$tmp/fourteen/.claude/skills/whatdoesthisdo/SKILL.md") -ne $expected) { Fail "update did not refresh the skill with the custom folder" }
+  $claude = Get-Content -Raw "$tmp/fourteen/CLAUDE.md"
+  if ($claude -notmatch "Keep them.") { Fail "update lost the rest of CLAUDE.md" }
+  if ($claude -notmatch "Tail rule.") { Fail "update lost text after the block" }
+  if (-not $claude.StartsWith("# My rules")) { Fail "update moved the block" }
+  if ($claude -match "old entry") { Fail "update left the outdated block" }
+  if (([regex]::Matches($claude, "whatdoesthisdo:start")).Count -ne 1) { Fail "update duplicated the block" }
+  if ($claude -notmatch "docs/refs/") { Fail "update lost the custom folder in the block" }
+
+  # everything current says so and changes nothing
+  $before = (Get-Content -Raw "$tmp/fourteen/CLAUDE.md") + (Get-Content -Raw "$tmp/fourteen/.claude/skills/whatdoesthisdo/SKILL.md")
+  $out = (Run "$tmp/fourteen" @{ Update = $true }) -join "`n"
+  if ($out -notmatch "up to date") { Fail "update with current files did not say so" }
+  $after = (Get-Content -Raw "$tmp/fourteen/CLAUDE.md") + (Get-Content -Raw "$tmp/fourteen/.claude/skills/whatdoesthisdo/SKILL.md")
+  if ($before -ne $after) { Fail "update with current files changed something" }
+
+  # a cursor-only setup is updated without creating CLAUDE.md
+  NewRepo "$tmp/fifteen"
+  Run "$tmp/fifteen" @{ Agent = "cursor"; Scope = "project"; Yes = $true } | Out-Null
+  Add-Content -Path "$tmp/fifteen/.cursor/rules/whatdoesthisdo.mdc" -Value "old"
+  Run "$tmp/fifteen" @{ Update = $true } | Out-Null
+  if ((Get-Content -Raw "$tmp/fifteen/.cursor/rules/whatdoesthisdo.mdc") -ne (Get-Content -Raw "$agentDir/cursor-rule.mdc")) { Fail "update did not refresh the cursor rule" }
+  if (Test-Path "$tmp/fifteen/CLAUDE.md") { Fail "update created CLAUDE.md for a cursor-only setup" }
+
+  # nothing installed anywhere says so
+  NewRepo "$tmp/sixteen"
+  $out = (Run "$tmp/sixteen" @{ Update = $true }) -join "`n"
+  if ($out -notmatch "Nothing from WhatDoesThisDo") { Fail "update with nothing installed did not say so" }
+
+  # project and home are updated in one run, with the note to paste the Cursor rule again
+  Run "$tmp/sixteen" @{ Agent = "both"; Scope = "project"; Yes = $true } | Out-Null
+  Run "$tmp/sixteen" @{ Agent = "both"; Scope = "global"; Yes = $true } | Out-Null
+  Add-Content -Path "$tmp/sixteen/.claude/skills/whatdoesthisdo/SKILL.md" -Value "old"
+  Add-Content -Path "$tmp/home/.claude/skills/whatdoesthisdo/SKILL.md" -Value "old"
+  $out = (Run "$tmp/sixteen" @{ Update = $true }) -join "`n"
+  if ((Get-Content -Raw "$tmp/sixteen/.claude/skills/whatdoesthisdo/SKILL.md") -ne (Get-Content -Raw "$agentDir/skill/SKILL.md")) { Fail "update did not refresh the project skill" }
+  if ((Get-Content -Raw "$tmp/home/.claude/skills/whatdoesthisdo/SKILL.md") -ne (Get-Content -Raw "$agentDir/skill/SKILL.md")) { Fail "update did not refresh the home skill" }
+  if ($out -notmatch "User Rules") { Fail "update of the home skill did not mention the pasted Cursor rule" }
+  Run "$tmp/sixteen" @{ Uninstall = $true; Scope = "global" } | Out-Null
+
+  # interactive update: down to Update, enter on the summary
+  NewRepo "$tmp/seventeen"
+  Run "$tmp/seventeen" @{ Agent = "both"; Scope = "project"; Yes = $true } | Out-Null
+  Add-Content -Path "$tmp/seventeen/.claude/skills/whatdoesthisdo/SKILL.md" -Value "old"
+  $env:WDTD_KEYS = "`n$([char]27)[B`n`n"
+  Push-Location "$tmp/seventeen"
+  try { $out = (& $script) -join "`n" } finally { Pop-Location; Remove-Item Env:WDTD_KEYS }
+  if ($out -notmatch "Updated") { Fail "interactive update: no success message" }
+  if ((Get-Content -Raw "$tmp/seventeen/.claude/skills/whatdoesthisdo/SKILL.md") -ne (Get-Content -Raw "$agentDir/skill/SKILL.md")) { Fail "interactive update did not refresh the skill" }
+
+  # interactive update with everything current: enter does nothing, q leaves
+  $env:WDTD_KEYS = "`n$([char]27)[B`n`nq"
+  Push-Location "$tmp/seventeen"
+  try { $out = (& $script) -join "`n" } finally { Pop-Location; Remove-Item Env:WDTD_KEYS }
+  if ($out -notmatch "nothing updated") { Fail "interactive current update did not say nothing updated" }
+
+  # interactive: from the update summary, 1 changes the action to Install and the scope step starts on This project
+  $env:WDTD_KEYS = "`n$([char]27)[B`n1$([char]27)[A`n`n`n`nq"
+  Push-Location "$tmp/seventeen"
+  try { $out = (& $script 6>&1) -join "`n" } finally { Pop-Location; Remove-Item Env:WDTD_KEYS }
+  if ($out -notmatch "Scope\s+This project") { Fail "action switch from update did not preselect this project" }
+  if ($out -notmatch "nothing written") { Fail "action switch from update did not end with nothing written" }
 
   Write-Host "setup tests passed: setup-windows.ps1"
 } finally {

@@ -20,5 +20,6 @@ Set up WhatDoesThisDo documentation for this repository.
    format the skill describes.
 5. Show me every file you created or changed, then stop. Do not commit.
 
-To remove the setup later, ask the agent to delete the skill folder and the Cursor rule file from step 3 and to take
+To update the setup later, ask the agent to fetch the same files again and overwrite the installed copies, keeping
+the folder path and the rest of `CLAUDE.md`. To remove the setup later, ask the agent to delete the skill folder and the Cursor rule file from step 3 and to take
 the marked block out of `CLAUDE.md`, leaving the rest of that file and the references folder as they are.

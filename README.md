@@ -140,10 +140,10 @@ cursor --install-extension TonyCJ7.whatdoesthisdo    # Cursor
 ### 2. Set up your AI agent
 
 In your own project, run the installer for your operating system. It opens with a welcome screen, asks whether to
-install or uninstall, then asks three questions: which agent to set up, whether for this project or for every project,
-and where the pages live. Arrow keys move, enter selects, `b` goes back and `q` quits. A summary shows your choices and
-the files it is about to write, and you can jump back to any step from there. Once the files are written it reminds
-you to reload the editor, because skills and rules are read when a session starts.
+install, update or uninstall, then asks three questions: which agent to set up, whether for this project or for every
+project, and where the pages live. Arrow keys move, enter selects, `b` goes back and `q` quits. A summary shows your
+choices and the files it is about to write, and you can jump back to any step from there. Once the files are written
+it reminds you to reload the editor, because skills and rules are read when a session starts.
 
 macOS:
 
@@ -165,6 +165,13 @@ irm https://raw.githubusercontent.com/TonyCJ7/WhatDoesThisDo/main/setup/setup-wi
 
 If you would rather not run a script, paste the contents of [`agent/PROMPT.md`](agent/PROMPT.md) into Claude Code or
 Cursor. The agent asks the same questions and copies the same files.
+
+When this repository ships a newer skill or rule, run the same installer and choose **Update**, or pass `--update`
+(`-Update` on Windows). It looks in the open project and in your home folder, shows each installed file as up to date
+or outdated, and rewrites the outdated ones in place, keeping the folder you chose and the rest of `CLAUDE.md`. The
+extension notices an older skill when a window opens and offers the same update. The command
+`WhatDoesThisDo: Update the agent skill and rules` runs it at any time. Both leave a `CLAUDE.md` with unsaved changes
+alone and ask you to save it first.
 
 To undo the setup, run the same installer and choose **Uninstall**, or pass `--uninstall --scope project` or
 `--uninstall --scope global` (`-Uninstall -Scope` on Windows). It looks for what an install leaves behind, the skill
@@ -377,7 +384,7 @@ The installer scripts have their own tests, run against temporary repositories o
 Tests workflow on GitHub. Their welcome and success screens draw `docs/assets/logo.png` as terminal pixel art;
 `python3 setup/make-logo.py` (Pillow and numpy) regenerates that data inside the three scripts after a logo change.
 
-The repository documents its own three source files under `docs/whatdoesthisdo/references/`, so the hover works in this
+The repository documents its own four source files under `docs/whatdoesthisdo/references/`, so the hover works in this
 checkout too.
 
 ---

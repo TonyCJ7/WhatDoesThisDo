@@ -154,6 +154,16 @@ suite("without a language server", () => {
     }
   });
 
+  test("the agent update command is registered and the agent files ship with the extension", async () => {
+    const commands = await vscode.commands.getCommands(true);
+    const extension = vscode.extensions.getExtension("TonyCJ7.whatdoesthisdo");
+
+    assert.ok(commands.includes("whatDoesThisDo.updateAgentFiles"));
+    assert.ok(fs.existsSync(path.join(extension.extensionPath, "agent", "skill", "SKILL.md")));
+    assert.ok(fs.existsSync(path.join(extension.extensionPath, "agent", "rule-block.md")));
+    assert.ok(fs.existsSync(path.join(extension.extensionPath, "agent", "cursor-rule.mdc")));
+  });
+
   test("plain text: adds nothing for a word without an entry", async () => {
     const texts = await hoverAt({ file: "notes.txt", needle: "call", word: "call" });
 

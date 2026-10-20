@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.4
+
+- The installers start by asking whether to install, update or uninstall. Update finds the skill and rules installed
+  in the project and in the home folder and rewrites the outdated ones in place. Uninstall shows what an earlier
+  install left in the chosen scope and removes only that; the reference pages and the rest of `CLAUDE.md` stay.
+  `--update` and `--uninstall --scope` do the same without questions.
+- The extension carries the agent files. When a window opens and the skill installed in an open folder or in the
+  home folder is older, it offers to update it. The command `WhatDoesThisDo: Update the agent skill and rules` does
+  the same at any time.
+- The agent rule and skill cover methods, classes and types as well as functions and constants, and the skill
+  describes the shape of an entry: one sentence on what it does, what every parameter is, what comes back and what
+  is refused.
+- The installer's scope step says that the Cursor rule for every project has to be pasted into Cursor's settings.
+
 ## 0.1.3
 
 - The hover has a second link under the heading, `Open in <page>.md`, which opens the page at the entry.
@@ -9,9 +23,6 @@
   or a `git pull`, when the window opens and when it regains focus. Setting `whatDoesThisDo.updateLines` turns that
   off; the command `WhatDoesThisDo: Update line numbers` does it for every page at once.
 - The page walk no longer follows symbolic links, and a linked file above two megabytes is not searched.
-- The installers start by asking whether to install or uninstall. Uninstall shows what an earlier install left in the
-  chosen scope and removes only that; the reference pages and the rest of `CLAUDE.md` stay. `--uninstall --scope`
-  does the same without questions.
 
 ## 0.1.2
 

@@ -1,7 +1,9 @@
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 const vscode = require("vscode");
 
+const { bundledSkillVersion, installPaths, installedSkillVersion, isOlder, updateInstall } = require("./agentFiles.js");
 const { declarationLine } = require("./lines.js");
 const { parseReference } = require("./parse.js");
 
@@ -11,7 +13,9 @@ const LINE_IN_LINK = /#L(\d+)$/;
 const SIGNATURE = /\(.*$/;
 const SETTLE_MS = 150;
 const MAX_SEARCH_BYTES = 2 * 1024 * 1024;
+const AGENT_DIR = path.join(__dirname, "agent");
 const pagesByFolder = new Map();
+const offeredUpdates = new Set();
 const pendingChanges = new Map();
 const syncedAt = new Map();
 let settleTimer;
@@ -424,6 +428,88 @@ function warmIndex() {
   }
 }
 
+function installBases() {
+  const bases = (vscode.workspace.workspaceFolders ?? []).map((folder) => ({ base: folder.uri.fsPath, scope: "project" }));
+
+  return [...bases, { base: os.homedir(), scope: "global" }];
+}
+
+function whereLabel(place) {
+  return place.scope === "project" ? `the ${path.basename(place.base)} project` : "your home folder";
+}
+
+function dirtyClaudeMd(place) {
+  const file = installPaths(place.base, place.scope).claudeMd;
+
+  return vscode.workspace.textDocuments.some((document) => document.isDirty && document.uri.fsPath === file);
+}
+
+function updatePlace(place) {
+  if (dirtyClaudeMd(place)) {
+    vscode.window.showWarningMessage(`WhatDoesThisDo: CLAUDE.md in ${whereLabel(place)} has unsaved changes. Save it, then run "WhatDoesThisDo: Update the agent skill and rules".`);
+
+    return [];
+  }
+
+  try {
+    return updateInstall(place.base, place.scope, AGENT_DIR);
+  } catch (error) {
+    vscode.window.showErrorMessage(`WhatDoesThisDo: could not update the agent files in ${whereLabel(place)}: ${error.message}`);
+
+    return [];
+  }
+}
+
+function fileCount(written) {
+  return `${written.length} agent file${written.length === 1 ? "" : "s"}`;
+}
+
+async function updateAgentFiles() {
+  const places = installBases().filter((place) => installedSkillVersion(place.base, place.scope) !== undefined);
+
+  if (places.length === 0) {
+    vscode.window.showInformationMessage("WhatDoesThisDo: no agent skill is installed in this project or in your home folder.");
+
+    return;
+  }
+
+  const written = places.flatMap(updatePlace);
+
+  if (written.length > 0) {
+    vscode.window.showInformationMessage(`WhatDoesThisDo: updated ${fileCount(written)}. Reload the window so the agent picks them up.`);
+  }
+}
+
+async function offerAgentUpdate() {
+  const bundled = bundledSkillVersion(AGENT_DIR);
+
+  for (const place of installBases()) {
+    const installed = installedSkillVersion(place.base, place.scope);
+
+    if (installed === undefined || !isOlder(installed, bundled) || offeredUpdates.has(place.base)) {
+      continue;
+    }
+
+    offeredUpdates.add(place.base);
+
+    const choice = await vscode.window.showInformationMessage(
+      `WhatDoesThisDo: the agent skill in ${whereLabel(place)} is version ${installed ?? "unknown"}, and this extension carries ${bundled}. Update it?`,
+      "Update",
+      "Later",
+    );
+
+    if (choice !== "Update") {
+      continue;
+    }
+
+    const written = updatePlace(place);
+
+    if (written.length > 0) {
+      vscode.window.showInformationMessage(`WhatDoesThisDo: updated ${fileCount(written)} in ${whereLabel(place)}. Reload the window so the agent picks them up.`);
+    }
+  }
+}
+
 function activate(context) {
   const watcher = vscode.workspace.createFileSystemWatcher("**/*", true, false, true);
 
@@ -434,9 +520,11 @@ function activate(context) {
     watcher.onDidChange(onFileChanged),
     vscode.window.onDidChangeWindowState((state) => state.focused && enqueue(syncStalePages)),
     vscode.commands.registerCommand("whatDoesThisDo.updateLines", () => enqueue(updateAllLines)),
+    vscode.commands.registerCommand("whatDoesThisDo.updateAgentFiles", updateAgentFiles),
   );
   warmIndex();
   enqueue(syncStalePages);
+  offerAgentUpdate();
 }
 
 module.exports = { activate };

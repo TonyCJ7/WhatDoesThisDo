@@ -3,6 +3,8 @@ name: whatdoesthisdo
 description: Keep the markdown reference pages that WhatDoesThisDo shows on hover in step with the code. Use before changing a function, method, class, type or constant, to read its entry, and after creating, changing, renaming, moving or deleting one, to write or update its entry in the same change.
 ---
 
+<!-- whatdoesthisdo-skill-version: 0.1.4 -->
+
 # WhatDoesThisDo reference pages
 
 The project documents its own functions, methods, classes, types and constants in markdown pages, not in code

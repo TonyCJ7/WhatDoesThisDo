@@ -15,7 +15,7 @@ MODE=""
 
 usage() {
   cat <<USAGE
-Sets up the WhatDoesThisDo documentation skill and rule for Claude Code and Cursor, or removes them again.
+Sets up the WhatDoesThisDo documentation skill and rule for Claude Code and Cursor, updates them, or removes them.
 
 Without options the script asks on screen; arrow keys move, enter selects, b goes back, q quits.
 
@@ -24,6 +24,7 @@ Options:
   --scope project|global       this repository, or every project on this machine
   --folder <path>              references folder relative to the repository root
   --yes                        accept the defaults for anything not given and write without asking
+  --update                     bring the skill and rules already installed, in this project and in ~/.claude, up to date
   --uninstall                  remove what the script installed in the given --scope; the pages stay
 USAGE
 }
@@ -34,6 +35,7 @@ while [ $# -gt 0 ]; do
     --scope) SCOPE="$2"; shift 2 ;;
     --folder) FOLDER="$2"; shift 2 ;;
     --yes) YES=1; shift ;;
+    --update) MODE=update; shift ;;
     --uninstall) MODE=uninstall; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
@@ -217,7 +219,7 @@ screen_welcome() {
     printf '  This sets up your AI agent to keep the documentation pages in step with the code.\n'
     printf '  It installs a skill that tells Claude Code and Cursor how the pages are named and\n'
     printf '  written, and a rule that makes the agent read an entry before changing code and\n'
-    printf '  update it in the same change. It can also remove both again.\n\n'
+    printf '  update it in the same change. It can also update or remove both again.\n\n'
     printf '  A few short steps. Nothing is written or removed until you confirm on the summary.\n'
     printf '  %senter start · q quit%s' "$DIM" "$RESET"
 
@@ -275,7 +277,7 @@ choose() {
 }
 
 mode_index() {
-  case "$MODE" in uninstall) echo 2 ;; *) echo 1 ;; esac
+  case "$MODE" in update) echo 2 ;; uninstall) echo 3 ;; *) echo 1 ;; esac
 }
 
 agent_index() {
@@ -287,11 +289,12 @@ scope_index() {
 }
 
 screen_mode() {
-  choose "step 1" "What do you want to do?" "$(mode_index)" "Install" "Uninstall"
+  choose "step 1" "What do you want to do?" "$(mode_index)" "Install" "Update" "Uninstall"
 
   case "$CHOICE" in
     1) MODE=install ;;
-    2) MODE=uninstall ;;
+    2) MODE=update ;;
+    3) MODE=uninstall ;;
   esac
 }
 
@@ -359,15 +362,48 @@ scope_label() {
 }
 
 summary_screen() {
-  if [ "$MODE" = uninstall ]; then echo 3; else echo 5; fi
+  case "$MODE" in update) echo 2 ;; uninstall) echo 3 ;; *) echo 5 ;; esac
 }
 
 quit_nothing() {
   clear_screen
 
-  if [ "$MODE" = uninstall ]; then echo "nothing removed"; else echo "nothing written"; fi
+  case "$MODE" in
+    update) echo "nothing updated" ;;
+    uninstall) echo "nothing removed" ;;
+    *) echo "nothing written" ;;
+  esac
 
   exit 0
+}
+
+screen_update_summary() {
+  while :; do
+    clear_screen
+    header "summary"
+    printf '  %s1%s  Action   Update\n\n' "$DIM" "$RESET"
+    found=$(update_lines)
+    outdated=$(printf '%s' "$found" | grep -c outdated || true)
+
+    if [ -z "$found" ]; then
+      printf '  Nothing from WhatDoesThisDo found %s.\n\n' "$(where_text)"
+      printf '%s1 change the action · q quit%s\n' "$DIM" "$RESET"
+    elif [ "$outdated" = 0 ]; then
+      printf '%sInstalled:%s\n%s\n\n  Everything is up to date.\n\n' "$BOLD" "$RESET" "$found"
+      printf '%s1 change the action · q quit%s\n' "$DIM" "$RESET"
+    else
+      printf '%sInstalled:%s\n%s\n\n' "$BOLD" "$RESET" "$found"
+      printf '%senter update the outdated files · 1 change the action · q quit%s\n' "$DIM" "$RESET"
+    fi
+
+    read_key
+
+    case "$KEY" in
+      enter) [ "$outdated" != 0 ] || continue; CHOICE=done; return ;;
+      1) CHOICE=1; return ;;
+      quit) CHOICE=quit; return ;;
+    esac
+  done
 }
 
 screen_install_summary() {
@@ -431,7 +467,11 @@ interactive() {
 
   while :; do
     if [ "$screen" = "$(summary_screen)" ]; then
-      if [ "$MODE" = uninstall ]; then screen_uninstall_summary; else screen_install_summary; fi
+      case "$MODE" in
+        update) screen_update_summary ;;
+        uninstall) screen_uninstall_summary ;;
+        *) screen_install_summary ;;
+      esac
 
       case "$CHOICE" in
         done) clear_screen; INTERACTIVE_DONE=1; return ;;
@@ -603,6 +643,103 @@ cursor_unpaste_note() {
   printf '\n%sIf you pasted the Cursor rule into Cursor Settings > Rules > User Rules, remove it there.%s\n' "$YELLOW" "$RESET"
 }
 
+# ---------- update ----------
+
+scopes_here() {
+  [ -z "$ROOT" ] || echo project
+  echo global
+}
+
+where_text() {
+  if [ -n "$ROOT" ]; then echo "in this project or in ~/.claude"; else echo "in ~/.claude"; fi
+}
+
+# The references folder a scope was installed with, read from the skill or the rule block it holds.
+installed_folder() {
+  skill="$(scope_base)/.claude/skills/whatdoesthisdo/SKILL.md"
+  folder=$(sed -n 's/^The folder is `\(.*\)\/` in the repository root.*/\1/p' "$skill" 2>/dev/null | head -1)
+  [ -n "$folder" ] || folder=$(sed -n 's/^`\(.*\)\/`, shown on hover by.*/\1/p' "$(claude_md_path)" 2>/dev/null | head -1)
+  printf '%s' "${folder:-$DEFAULT_FOLDER}"
+}
+
+file_state() {
+  if substitute "$2" | cmp -s - "$1"; then echo "up to date"; else echo "outdated"; fi
+}
+
+current_block() {
+  sed -n '/<!-- whatdoesthisdo:start -->/,/<!-- whatdoesthisdo:end -->/p' "$1"
+}
+
+block_state() {
+  if [ "$(current_block "$1")" = "$(substitute "$SRC/rule-block.md")" ]; then echo "up to date"; else echo "outdated"; fi
+}
+
+# One line per installed file in this project and in the home folder, each marked outdated or up to date.
+update_lines() {
+  for SCOPE in $(scopes_here); do
+    FOLDER=$(installed_folder)
+    skill="$(scope_base)/.claude/skills/whatdoesthisdo/SKILL.md"
+    claude_md=$(claude_md_path)
+    [ -f "$skill" ] && printf '  %s  (%s)\n' "$skill" "$(file_state "$skill" "$SRC/skill/SKILL.md")"
+    has_block "$claude_md" && printf '  %s  (rule block, %s)\n' "$claude_md" "$(block_state "$claude_md")"
+    [ "$SCOPE" = project ] && [ -f "$(cursor_rule_path)" ] && printf '  %s  (%s)\n' "$(cursor_rule_path)" "$(file_state "$(cursor_rule_path)" "$SRC/cursor-rule.mdc")"
+  done
+
+  SCOPE=""
+  return 0
+}
+
+replace_block() {
+  substitute "$SRC/rule-block.md" > "$TMP/block"
+  awk -v f="$TMP/block" '
+    BEGIN { while ((getline l < f) > 0) b = b (n++ ? "\n" : "") l }
+    /<!-- whatdoesthisdo:start -->/ { print b; skip = 1 }
+    !skip { print }
+    /<!-- whatdoesthisdo:end -->/ { skip = 0 }
+  ' "$1" > "$TMP/claude" && cat "$TMP/claude" > "$1"
+}
+
+apply_update() {
+  for SCOPE in $(scopes_here); do
+    FOLDER=$(installed_folder)
+    skill="$(scope_base)/.claude/skills/whatdoesthisdo/SKILL.md"
+    claude_md=$(claude_md_path)
+    [ -f "$skill" ] && [ "$(file_state "$skill" "$SRC/skill/SKILL.md")" = outdated ] && substitute "$SRC/skill/SKILL.md" > "$skill"
+    has_block "$claude_md" && [ "$(block_state "$claude_md")" = outdated ] && replace_block "$claude_md"
+
+    if [ "$SCOPE" = project ] && [ -f "$(cursor_rule_path)" ] && [ "$(file_state "$(cursor_rule_path)" "$SRC/cursor-rule.mdc")" = outdated ]; then
+      substitute "$SRC/cursor-rule.mdc" > "$(cursor_rule_path)"
+    fi
+  done
+
+  SCOPE=""
+  [ "${INTERACTIVE_DONE:-0}" = 1 ] && return 0
+  printf '%sDone.%s Updated:\n%s\n' "$GREEN" "$RESET" "$(updated_display)"
+  cursor_repaste_note
+}
+
+updated_display() {
+  printf '%s\n' "$UPDATED" | sed 's/  (outdated)$//; s/  (rule block, outdated)$/  (rule block)/'
+}
+
+cursor_repaste_note() {
+  printf '%s\n' "$UPDATED" | grep -q "^  $HOME/.claude/skills" || return 0
+  SCOPE=global
+  FOLDER=$(installed_folder)
+  SCOPE=""
+  printf '\n%sIf you pasted the Cursor rule into Cursor Settings > Rules > User Rules, replace it with this:%s\n\n' "$YELLOW" "$RESET"
+  substitute "$SRC/cursor-rule.mdc" | awk 'f && NF { print } /^---$/ { c++; if (c == 2) f = 1 }'
+}
+
+show_updated() {
+  logo
+  printf '\n  %s✔ Updated.%s\n%s\n\n' "$GREEN" "$RESET" "$(updated_display)"
+  printf '  %sNext:%s reload your editor so the new skill and rule are picked up.\n' "$BOLD" "$RESET"
+  printf '    VS Code and Cursor: Command Palette, "Developer: Reload Window"\n'
+  printf '    Claude Code: start a new session\n'
+  cursor_repaste_note
+}
+
 show_removed() {
   logo
   printf '\n  %s✔ Uninstalled.%s Removed:\n%s\n\n' "$GREEN" "$RESET" "$REMOVED"
@@ -638,12 +775,42 @@ show_success() {
 
 if [ "$MODE" = uninstall ]; then
   [ -n "$SCOPE" ] || interactive
+elif [ "$MODE" = update ]; then
+  :
 elif [ "$YES" = 1 ]; then
   [ -n "$AGENT" ] || AGENT=both
   [ -n "$SCOPE" ] || SCOPE=project
   [ -n "$FOLDER" ] || FOLDER=$DEFAULT_FOLDER
 elif [ -z "$AGENT" ] || [ -z "$SCOPE" ] || [ -z "$FOLDER" ]; then
   interactive
+fi
+
+if [ "$MODE" = update ]; then
+  found=$(update_lines)
+  UPDATED=$(printf '%s\n' "$found" | grep outdated || true)
+
+  if [ -z "$found" ]; then
+    echo "Nothing from WhatDoesThisDo found $(where_text)."
+    exit 0
+  fi
+
+  if [ -z "$UPDATED" ]; then
+    echo "Everything is up to date."
+    exit 0
+  fi
+
+  if [ "${INTERACTIVE_DONE:-0}" = 1 ]; then
+    update_log="$TMP/update.log"
+    (apply_update > "$update_log" 2>&1) &
+    spin_while_writing $! "Updating files…"
+    wait $! || { cat "$update_log"; exit 1; }
+    clear_screen
+    show_updated
+  else
+    apply_update
+  fi
+
+  exit 0
 fi
 
 if [ "$MODE" = uninstall ]; then
