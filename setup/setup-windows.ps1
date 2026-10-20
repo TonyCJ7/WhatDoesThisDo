@@ -12,6 +12,7 @@ param(
 $ErrorActionPreference = "Stop"
 $RawUrl = "https://raw.githubusercontent.com/TonyCJ7/WhatDoesThisDo/main/agent"
 $DefaultFolder = "docs/whatdoesthisdo/references"
+$CursorNote = "paste the Cursor rule yourself"
 $ScriptedKeys = $null
 $script:InteractiveDone = $false
 if ($env:WDTD_KEYS) { $ScriptedKeys = [System.Collections.Generic.Queue[char]]::new([char[]] $env:WDTD_KEYS) }
@@ -249,7 +250,10 @@ try {
   function Get-AgentIndex { switch ($script:Agent) { "claude" { 2 } "cursor" { 3 } default { 1 } } }
   function Get-ScopeIndex { if ($script:Scope -eq "global") { 2 } else { 1 } }
   function Get-AgentLabel { switch ($script:Agent) { "claude" { "Claude Code" } "cursor" { "Cursor" } default { "Both Claude Code and Cursor" } } }
-  function Get-ScopeLabel { if ($script:Scope -eq "global") { "Everywhere for me  (~/.claude)" } else { "This project  ($root)" } }
+  function Get-ScopeLabel {
+    if ($script:Scope -ne "global") { return "This project  ($root)" }
+    if ($script:Agent -eq "claude") { "Everywhere for me  (~/.claude)" } else { "Everywhere for me  (~/.claude, $CursorNote)" }
+  }
 
   function Show-AgentScreen {
     $choice = Select-Option "step 1 of 3" "Which agent should follow the documentation rule?" (Get-AgentIndex) @("Both Claude Code and Cursor", "Claude Code", "Cursor")
@@ -260,7 +264,9 @@ try {
   function Show-ScopeScreen {
     $projectOption = if ($root) { "This project only          $root" } else { "This project only          (not inside a git repository)" }
     while ($true) {
-      $choice = Select-Option "step 2 of 3" "Where should this apply?" (Get-ScopeIndex) @($projectOption, "Everywhere for me          ~/.claude on this machine")
+      $globalOption = "Everywhere for me          ~/.claude on this machine"
+      if ($script:Agent -ne "claude") { $globalOption = "Everywhere for me          ~/.claude, $CursorNote" }
+      $choice = Select-Option "step 2 of 3" "Where should this apply?" (Get-ScopeIndex) @($projectOption, $globalOption)
       if ($choice -eq 1 -and -not $root) { continue }
       if ($choice -eq 1) { $script:Scope = "project" }
       if ($choice -eq 2) { $script:Scope = "global" }
@@ -364,7 +370,7 @@ try {
     Get-PlanLines | ForEach-Object { Write-Output ($_ -replace "  \(only if missing\)", "") }
     if ($script:Agent -ne "claude" -and $script:Scope -eq "global") {
       Write-Output ""
-      Write-Output "Cursor has no global rules file. Paste this into Cursor Settings > Rules > User Rules:"
+      Write-Output "Cursor keeps global rules in its settings. Paste this into Cursor Settings > Rules > User Rules:"
       Write-Output ""
       $body = (Get-Substituted (Join-Path $src "cursor-rule.mdc")) -split "(?m)^---\s*$"
       Write-Output $body[-1].Trim()
@@ -415,7 +421,7 @@ try {
     Write-Output "    Claude Code: start a new session"
     if ($script:Agent -ne "claude" -and $script:Scope -eq "global") {
       Write-Output ""
-      Write-Output "Cursor has no global rules file. Paste this into Cursor Settings > Rules > User Rules:"
+      Write-Output "Cursor keeps global rules in its settings. Paste this into Cursor Settings > Rules > User Rules:"
       Write-Output ""
       $body = (Get-Substituted (Join-Path $src "cursor-rule.mdc")) -split "(?m)^---\s*$"
       Write-Output $body[-1].Trim()

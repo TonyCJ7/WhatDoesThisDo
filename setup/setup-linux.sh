@@ -6,6 +6,7 @@ set -eu
 
 RAW_URL="https://raw.githubusercontent.com/TonyCJ7/WhatDoesThisDo/main/agent"
 DEFAULT_FOLDER="docs/whatdoesthisdo/references"
+CURSOR_NOTE="paste the Cursor rule yourself"
 AGENT=""
 SCOPE=""
 FOLDER=""
@@ -296,8 +297,10 @@ screen_scope() {
   fi
 
   while :; do
+    global_option="Everywhere for me          ~/.claude on this machine"
+    [ "$AGENT" = claude ] || global_option="Everywhere for me          ~/.claude, $CURSOR_NOTE"
     choose "step 2 of 3" "Where should this apply?" "$(scope_index)" \
-      "$project_option" "Everywhere for me          ~/.claude on this machine"
+      "$project_option" "$global_option"
 
     case "$CHOICE" in
       1) [ -n "$ROOT" ] || continue; SCOPE=project; return ;;
@@ -332,7 +335,8 @@ agent_label() {
 }
 
 scope_label() {
-  if [ "$SCOPE" = global ]; then echo "Everywhere for me  (~/.claude)"; else echo "This project  ($ROOT)"; fi
+  if [ "$SCOPE" != global ]; then echo "This project  ($ROOT)"; return; fi
+  if [ "$AGENT" = claude ]; then echo "Everywhere for me  (~/.claude)"; else echo "Everywhere for me  (~/.claude, $CURSOR_NOTE)"; fi
 }
 
 interactive() {
@@ -467,7 +471,7 @@ write_files() {
   printf '%sDone.%s Written:\n%s\n' "$GREEN" "$RESET" "$(plan_lines | sed 's/  (only if missing)//')"
 
   if [ "$AGENT" != claude ] && [ "$SCOPE" = global ]; then
-    printf '\n%sCursor has no global rules file.%s Paste this into Cursor Settings > Rules > User Rules:\n\n' "$YELLOW" "$RESET"
+    printf '\n%sCursor keeps global rules in its settings.%s Paste this into Cursor Settings > Rules > User Rules:\n\n' "$YELLOW" "$RESET"
     substitute "$SRC/cursor-rule.mdc" | awk 'f && NF { print } /^---$/ { c++; if (c == 2) f = 1 }'
   fi
 }
@@ -526,7 +530,7 @@ if [ "${INTERACTIVE_DONE:-0}" = 1 ]; then
   show_success
 
   if [ "$AGENT" != claude ] && [ "$SCOPE" = global ]; then
-    printf '\n%sCursor has no global rules file.%s Paste this into Cursor Settings > Rules > User Rules:\n\n' "$YELLOW" "$RESET"
+    printf '\n%sCursor keeps global rules in its settings.%s Paste this into Cursor Settings > Rules > User Rules:\n\n' "$YELLOW" "$RESET"
     substitute "$SRC/cursor-rule.mdc" | awk 'f && NF { print } /^---$/ { c++; if (c == 2) f = 1 }'
   fi
 else
